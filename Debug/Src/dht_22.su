@@ -1,0 +1,4 @@
+../Src/dht_22.c:12:6:DHT22_Start	8	static
+../Src/dht_22.c:27:7:Delay_us	16	static
+../Src/dht_22.c:37:6:DHT22_Timer_Init	4	static
+../Src/dht_22.c:47:9:DHT22_Check_Response	16	static
