@@ -63,5 +63,31 @@ uint8_t DHT22_Check_Response(void){
 	return response;
 
 }
+uint8_t DHT22_Read_Byte(void) {
+
+	/*This Logic for data decoding was written with the aid of Gen AI (Google Gemini, 2026)*/
+
+    uint8_t result = 0;
+
+    for (int i = 0; i < 8; i++) {
+        // 1. Wait for the 50us LOW pulse to end
+        // We wait while the pin is LOW
+        while (!(GPIOA_IDR & (1 << 0)));
+
+        // 2. The pulse has gone HIGH. Wait for (40us)
+        Delay_us(40);
+
+        // 3. Sample the pin
+        if (GPIOA_IDR & (1 << 0)) {
+            // If still HIGH after 40us, it's a '1'
+            result |= (1 << (7 - i));
+        }
+        // If it's LOW, the bit is already 0, so we do nothing to 'result'
+
+        // 4. Wait for the remainder of the HIGH pulse to finish to prevents us from misreading the next bit
+        while (GPIOA->IDR & (1 << 0));
+    }
+    return result;
+}
 
 
