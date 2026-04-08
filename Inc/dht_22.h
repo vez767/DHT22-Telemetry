@@ -17,4 +17,9 @@
 #define GPIOA_IDR		(*(volatile uint32_t *)(GPIOA_BASE + 0x10))
 #define GPIOA_ODR		(*(volatile uint32_t *)(GPIOA_BASE + 0x14))
 
+typedef struct {
+    float Temperature;
+    float Humidity;
+} DHT22_Data_t;
+
 #endif

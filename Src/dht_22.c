@@ -65,7 +65,7 @@ uint8_t DHT22_Check_Response(void){
 }
 uint8_t DHT22_Read_Byte(void) {
 
-	/*This Logic for data decoding was written with the aid of Gen AI (Google Gemini, 2026)*/
+									/*This Logic for data decoding was written with the aid of Gen AI (Google Gemini, 2026)*/
 
     uint8_t result = 0;
 
@@ -85,9 +85,39 @@ uint8_t DHT22_Read_Byte(void) {
         // If it's LOW, the bit is already 0, so we do nothing to 'result'
 
         // 4. Wait for the remainder of the HIGH pulse to finish to prevents us from misreading the next bit
-        while (GPIOA->IDR & (1 << 0));
+        while (GPIOA_IDR & (1 << 0));
     }
     return result;
+}
+
+uint8_t data[5];
+
+int DHT22_Get_Data(DHT22_Data_t *target) {
+
+							/*This Logic for data validation and storage was written with the aid of Gen AI (Google Gemini, 2026)*/
+
+    // Handshake
+    DHT22_Start();
+    if (DHT22_Check_Response() != 1) return -1;
+
+    // Read the 5 bytes
+    for (int i = 0; i < 5; i++) {
+        data[i] = DHT22_Read_Byte();
+    }
+
+    // Checksum Validation
+    if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) {
+        return -2; // Checksum error
+    }
+
+    // Conversion Logic
+    target->Humidity = (float)((data[0] << 8) | data[1]) / 10.0; // Humidity is Byte 0 and 1 combined
+
+    // Temperature is Byte 2 and 3 combined (Bit 15 is the sign bit)
+    int16_t raw_temp = (data[2] << 8) | data[3];
+    target->Temperature = (float)raw_temp / 10.0;
+
+    return 0;
 }
 
 
