@@ -8,31 +8,37 @@
  * Constraint: Maximize CPU availability by preventing software-blocking delay loops; ensure the auto-reload register (ARR) ceiling is maximized to prevent early overflow.
  */
 
+ void delay_us(uint16_t us){
+
+	 TIM3_CNT = 0;
+
+	 while(TIM3_CNT < us);
+
+ }
+
 
 void DHT22_Start(void) {
 
 	RCC_AHB1ENR |= (1U << 0); // GPIOA Enable
 
-	 GPIOA_MODER &= ~(3U << 0);
+	GPIOA_MODER &= ~(3U << 0); // GPIO switched to Input mode to facilitate resistor pull-up
+
+	GPIOA_PUPDR  &= ~(3U << 0); // Clear
+	GPIOA_PUPDR  |= (1U << 0);
+	delay_us(1000);
+
 	 GPIOA_MODER |= (1 << 0); // Output mode
-
 	 GPIOA_ODR &= ~(1U << 0); // drop voltage in PA0
+	 delay_us(1100);
 
-	 // Wait 1ms
-	 Delay_us(1000);
+	 GPIOA_MODER &= ~(3U << 0); // Input
 
-	 GPIOA_MODER &= ~(3U << 0); // Input mode
+	 // Wait 55 microseconds for the resistor to pull the line HIGH!
+	 delay_us(55);
+
 }
 
- void Delay_us(uint16_t us){
 
-	 TIM3_CNT = 0;
-
-	 while(TIM3_CNT < us){
-
-	 }
-
- }
 
 void DHT22_Timer_Init(void){
 
@@ -44,61 +50,83 @@ void DHT22_Timer_Init(void){
 
  }
 
-uint8_t DHT22_Check_Response(void){
 
-	uint8_t response = 0;
-	Delay_us(40);
+int8_t DHT22_Check_Response(void){
+	uint16_t timeout = 0;
 
-	if(!(GPIOA_IDR & (1U << 0))){
-		Delay_us(80);
-
-
-	if(GPIOA_IDR & ((1U << 0))){
-		response = 1;
-		}
+					/*Response from Sensor*/
+	while(GPIOA_IDR & (1U << 0))
+	{
+		delay_us(1);
+		timeout++;
+		if (timeout > 200) return -10; // Error code: No response from sensor
 	}
 
-	while (GPIOA_IDR & (1U << 0));
+					/*Sensor holding Line LOW(80μs)*/
+	timeout = 0;
+	while (!(GPIOA_IDR & (1 << 0)))
+	{
+	    delay_us(1);
+	    timeout++;
+	    if (timeout > 200) return -11; // Error code: Sensor stuck on LOW
+	}
 
-	return response;
+					/*Sensor holding Line LHIGH*/
+	timeout = 0;
+	while (GPIOA_IDR & (1 << 0))
+	{
+	     delay_us(1);
+	     timeout++;
+	     if (timeout > 200) return -12; // Error code: Sensor stuck on HIGH
+	}
+
+	return 1; // Success
 
 }
-uint8_t DHT22_Read_Byte(void) {
 
-									/*This Logic for data decoding was written with the aid of Gen AI (Google Gemini, 2026)*/
+					/*This Logic for data decoding was written with the aid of Generative AI (Google Gemini, 2026)*/
+uint8_t DHT22_Read_Byte(void) {
+			/* Clock-Independent Ratio Method */
 
     uint8_t result = 0;
 
     for (int i = 0; i < 8; i++) {
-        // 1. Wait for the 50us LOW pulse to end
-        // We wait while the pin is LOW
-        while (!(GPIOA_IDR & (1 << 0)));
+    	uint32_t low_cycles = 0;
+    	uint32_t high_cycles = 0;
 
-        // 2. The pulse has gone HIGH. Wait for (40us)
-        Delay_us(40);
+    	        // 1. Measure the LOW pulse
+    	while (!(GPIOA_IDR & (1 << 0)))
+    	{
+    		low_cycles++;
+    	}
 
-        // 3. Sample the pin
-        if (GPIOA_IDR & (1 << 0)) {
-            // If still HIGH after 40us, it's a '1'
-            result |= (1 << (7 - i));
-        }
-        // If it's LOW, the bit is already 0, so we do nothing to 'result'
+    	        // 2. Measure the HIGH pulse
+    	while (GPIOA_IDR & (1 << 0))
+    	{
+    		high_cycles++;
+    	}
 
-        // 4. Wait for the remainder of the HIGH pulse to finish to prevents us from misreading the next bit
-        while (GPIOA_IDR & (1 << 0));
+    	        // 3. Ratio Test (If HIGH is longer than LOW, it's a '1')
+    	if (high_cycles > low_cycles)
+    	{
+    		result |= (1 << (7 - i));
+    	}
     }
+
     return result;
-}
+    }
 
 uint8_t data[5];
 
-int DHT22_Get_Data(DHT22_Data_t *target) {
+int8_t DHT22_Get_Data(DHT22_Data_t *target) {
 
-							/*This Logic for data validation and storage was written with the aid of Gen AI (Google Gemini, 2026)*/
+							/*This Logic for data validation and storage was written with the aid of Generative AI (Google Gemini, 2026)*/
 
     // Handshake
     DHT22_Start();
-    if (DHT22_Check_Response() != 1) return -1;
+
+    int8_t response = DHT22_Check_Response();
+    if (response != 1) return response; // Return the exact error code (-10, -11, -12)
 
     // Read the 5 bytes
     for (int i = 0; i < 5; i++) {
@@ -117,7 +145,7 @@ int DHT22_Get_Data(DHT22_Data_t *target) {
     int16_t raw_temp = (data[2] << 8) | data[3];
     target->Temperature = (float)raw_temp / 10.0;
 
-    return 0;
+    return 1;
 }
 
 

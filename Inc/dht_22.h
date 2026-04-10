@@ -1,6 +1,8 @@
 #ifndef DHT_22_H
 #define DHT_22_H
 
+#include <stdint.h>
+
 #define TIM3_BASE		(0x40000400UL) // Unsigned Long
 #define RCC_BASE		(0x40023800UL)
 #define GPIOA_BASE		(0x40020000UL)
@@ -16,10 +18,18 @@
 #define GPIOA_MODER		(*(volatile uint32_t *)(GPIOA_BASE + 0x00))
 #define GPIOA_IDR		(*(volatile uint32_t *)(GPIOA_BASE + 0x10))
 #define GPIOA_ODR		(*(volatile uint32_t *)(GPIOA_BASE + 0x14))
+#define GPIOA_PUPDR		(*(volatile uint32_t *)(GPIOA_BASE + 0x0C))
 
 typedef struct {
     float Temperature;
     float Humidity;
 } DHT22_Data_t;
+
+void delay_us(uint16_t us);
+void DHT22_Start(void);
+void DHT22_Timer_Init(void);
+int8_t DHT22_Check_Response(void);
+uint8_t DHT22_Read_Byte(void);
+int8_t DHT22_Get_Data(DHT22_Data_t *target);
 
 #endif
