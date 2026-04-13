@@ -20,8 +20,53 @@
 #include <stdint.h>
 #include "dht_22.h"
 
+int8_t dht_status;
+DHT22_Data_t Current_Climate;
+
+void delay_ms(uint32_t ms){
+
+	for(uint32_t i = 0; i < ms ; i++){
+		delay_us(1000);
+	}
+
+}
+
+
 int main(void)
 {
-    /* Loop forever */
-	for(;;);
+
+	SCB_CPACR |= (0xF << 20); // FPU Calculator
+
+
+
+	DHT22_Timer_Init();
+
+
+
+	while(1){
+
+		dht_status = 0;
+
+							/* Fault Tolerance Loop*/
+		for(uint8_t j = 0; j < 5 ; j++){
+
+			dht_status = DHT22_Get_Data(&Current_Climate);
+			if(dht_status == 1) break;
+
+			delay_ms(3000); //delay before retry
+
+		}
+
+		delay_ms(3000); // Cooldown
+	}
+
+}
+
+void SysTick_Handler(void) {
+    // Catch rogue 1ms ticks and do nothing to prevent crashing
+}
+
+void HardFault_Handler(void) {
+    // Catch severe memory errors
+    while(1);
 }

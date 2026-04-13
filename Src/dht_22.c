@@ -34,7 +34,7 @@ void DHT22_Start(void) {
 	 GPIOA_MODER &= ~(3U << 0); // Input
 
 	 // Wait 55 microseconds for the resistor to pull the line HIGH!
-	 delay_us(55);
+	 delay_us(2);
 
 }
 
@@ -55,11 +55,12 @@ int8_t DHT22_Check_Response(void){
 	uint16_t timeout = 0;
 
 					/*Response from Sensor*/
+
 	while(GPIOA_IDR & (1U << 0))
 	{
 		delay_us(1);
 		timeout++;
-		if (timeout > 200) return -10; // Error code: No response from sensor
+		if (timeout > 2000) return -10; // Error code: No response from sensor
 	}
 
 					/*Sensor holding Line LOW(80μs)*/
@@ -68,7 +69,7 @@ int8_t DHT22_Check_Response(void){
 	{
 	    delay_us(1);
 	    timeout++;
-	    if (timeout > 200) return -11; // Error code: Sensor stuck on LOW
+	    if (timeout > 2000) return -11; // Error code: Sensor stuck on LOW
 	}
 
 					/*Sensor holding Line LHIGH*/
@@ -77,7 +78,7 @@ int8_t DHT22_Check_Response(void){
 	{
 	     delay_us(1);
 	     timeout++;
-	     if (timeout > 200) return -12; // Error code: Sensor stuck on HIGH
+	     if (timeout > 2000) return -12; // Error code: Sensor stuck on HIGH
 	}
 
 	return 1; // Success

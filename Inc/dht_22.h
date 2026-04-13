@@ -7,6 +7,8 @@
 #define RCC_BASE		(0x40023800UL)
 #define GPIOA_BASE		(0x40020000UL)
 
+#define SCB_CPACR 		(*(volatile uint32_t *)(0xE000ED88UL))
+
 #define RCC_APB1ENR 	(*(volatile uint32_t *)(RCC_BASE + 0x40))
 #define RCC_AHB1ENR 	(*(volatile uint32_t *)(RCC_BASE + 0x30))
 
