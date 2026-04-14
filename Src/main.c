@@ -20,8 +20,12 @@
 #include <stdint.h>
 #include "dht_22.h"
 
-int8_t dht_status;
+uint32_t dht_status = 0;
+int8_t current_state;
+uint8_t fault_tolerance_count = 0;
+uint8_t sensor_fault = 0;
 DHT22_Data_t Current_Climate;
+DHT22_Data_t Displayed_Climate;
 
 void delay_ms(uint32_t ms){
 
@@ -41,24 +45,42 @@ int main(void)
 
 	DHT22_Timer_Init();
 
+	Displayed_Climate.Temperature = 0.0;
+	Displayed_Climate.Humidity = 0.0;
 
+
+
+	 fault_tolerance_count = 0;
 
 	while(1){
 
-		dht_status = 0;
+		current_state = 0;
+
+
 
 							/* Fault Tolerance Loop*/
 		for(uint8_t j = 0; j < 5 ; j++){
 
-			dht_status = DHT22_Get_Data(&Current_Climate);
-			if(dht_status == 1) break;
+			current_state = DHT22_Get_Data(&Current_Climate);
+			if(current_state == 1){
+				fault_tolerance_count = 0;
+				break;
+			}else if (current_state == -10){
+				fault_tolerance_count++;
+			}
+			else sensor_fault++;
 
 			delay_ms(3000); //delay before retry
 
 		}
 
+		if((current_state == 1) || (fault_tolerance_count == 5) )  dht_status = 1;
+		else dht_status = 0xA98AC7; //Error Code
+
 		delay_ms(3000); // Cooldown
+
 	}
+
 
 }
 
