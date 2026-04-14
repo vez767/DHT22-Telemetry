@@ -22,6 +22,8 @@
 #define GPIOA_ODR		(*(volatile uint32_t *)(GPIOA_BASE + 0x14))
 #define GPIOA_PUPDR		(*(volatile uint32_t *)(GPIOA_BASE + 0x0C))
 
+#define TIM3_EGR  (*(volatile uint32_t *)(TIM3_BASE + 0x14))
+
 typedef struct {
     float Temperature;
     float Humidity;

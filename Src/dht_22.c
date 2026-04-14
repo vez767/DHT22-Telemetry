@@ -46,6 +46,7 @@ void DHT22_Timer_Init(void){
 
 	 TIM3_ARR = 0xFFFF; // ARR Limit
 	 TIM3_PSC = 15U; // Prescaler
+	 TIM3_EGR |= (1U <<0);
 	 TIM3_CR1 |= (1U << 0); // Enable Counter
 
  }
