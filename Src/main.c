@@ -20,8 +20,89 @@
 #include <stdint.h>
 #include "dht_22.h"
 
+int32_t dht_status = 0;
+int8_t current_state;
+uint8_t fault_tolerance_count = 0;
+uint8_t sensor_fault = 0;
+DHT22_Data_t Current_Climate;
+DHT22_Data_t Displayed_Climate;
+
+void delay_ms(uint32_t ms){
+
+	for(uint32_t i = 0; i < ms ; i++){
+		delay_us(1000);
+	}
+
+}
+
+
 int main(void)
 {
-    /* Loop forever */
-	for(;;);
+
+	SCB_CPACR |= (0xF << 20); // FPU Calculator
+
+
+
+	DHT22_Timer_Init();
+
+	Displayed_Climate.Temperature = 0.0f;
+	Displayed_Climate.Humidity = 0.0f;
+	 fault_tolerance_count = 0;
+
+	while(1){
+
+		current_state = 0;
+
+
+
+							/* Fault Tolerance Loop*/
+
+
+			current_state = DHT22_Get_Data(&Current_Climate);
+			if(current_state == 1){
+				dht_status = 1;
+				fault_tolerance_count = 0;
+				sensor_fault = 0;
+
+				/*Hysteresis (Deadband) Filter */
+				float temp_diff = Current_Climate.Temperature - Displayed_Climate.Temperature;
+				if (temp_diff < 0.0f) temp_diff = -temp_diff; //`abs()` logic for float to avoid importing heavy libraries - `<stdlib.h>`
+
+				float humidity_diff = Current_Climate.Humidity - Displayed_Climate.Humidity;
+				if (humidity_diff < 0.0f) humidity_diff = -humidity_diff;
+
+				if(temp_diff >= 0.5) Displayed_Climate.Temperature = Current_Climate.Temperature;
+				if(humidity_diff >= 1.0) Displayed_Climate.Humidity = Current_Climate.Humidity;
+
+			}else if (current_state == -10){
+				fault_tolerance_count += 2;
+			}
+			else sensor_fault++;
+
+
+			if (current_state != 1) {
+			            if (fault_tolerance_count >= 6 || sensor_fault > 0) {
+			                if (sensor_fault > 0) dht_status = 0xA98AC7;
+			                else{
+			                	dht_status = -10;
+			                	Displayed_Climate.Temperature = -999.0f; // Error Code
+			                	Displayed_Climate.Humidity = -999.0f; // Error Code
+			                }
+			            }
+			        }
+
+		delay_ms(2000); // Cooldown
+
+	}
+
+
+}
+
+void SysTick_Handler(void) {
+    // Catch rogue 1ms ticks and do nothing to prevent crashing
+}
+
+void HardFault_Handler(void) {
+    // Catch severe memory errors
+    while(1);
 }
