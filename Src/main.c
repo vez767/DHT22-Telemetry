@@ -45,11 +45,8 @@ int main(void)
 
 	DHT22_Timer_Init();
 
-	Displayed_Climate.Temperature = 0.0;
-	Displayed_Climate.Humidity = 0.0;
-
-
-
+	Displayed_Climate.Temperature = 0.0f;
+	Displayed_Climate.Humidity = 0.0f;
 	 fault_tolerance_count = 0;
 
 	while(1){
@@ -67,6 +64,16 @@ int main(void)
 				fault_tolerance_count = 0;
 				sensor_fault = 0;
 
+				/*Hysteresis (Deadband) Filter */
+				float temp_diff = Current_Climate.Temperature - Displayed_Climate.Temperature;
+				if (temp_diff < 0.0f) temp_diff = -temp_diff; //`abs()` logic for float to avoid importing heavy libraries - `<stdlib.h>`
+
+				float humidity_diff = Current_Climate.Humidity - Displayed_Climate.Humidity;
+				if (humidity_diff < 0.0f) humidity_diff = -humidity_diff;
+
+				if(temp_diff >= 0.5) Displayed_Climate.Temperature = Current_Climate.Temperature;
+				if(humidity_diff >= 1.0) Displayed_Climate.Humidity = Current_Climate.Humidity;
+
 			}else if (current_state == -10){
 				fault_tolerance_count += 2;
 			}
@@ -76,7 +83,11 @@ int main(void)
 			if (current_state != 1) {
 			            if (fault_tolerance_count >= 6 || sensor_fault > 0) {
 			                if (sensor_fault > 0) dht_status = 0xA98AC7;
-			                else dht_status = -10;
+			                else{
+			                	dht_status = -10;
+			                	Displayed_Climate.Temperature = -999.0f; // Error Code
+			                	Displayed_Climate.Humidity = -999.0f; // Error Code
+			                }
 			            }
 			        }
 
