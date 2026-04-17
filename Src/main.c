@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include "dht_22.h"
+#include "i2c_lcd.h"
 
 int32_t dht_status = 0;
 int8_t current_state;
@@ -41,7 +42,12 @@ int main(void)
 
 	SCB_CPACR |= (0xF << 20); // FPU Calculator
 
+	TIM3_Init();
+	I2C_GPIO_Init();
+	I2C_Config();
 
+	I2C_ScanBus();
+/*
 
 	DHT22_Timer_Init();
 
@@ -53,18 +59,20 @@ int main(void)
 
 		current_state = 0;
 
+		*/
 
 
-							/* Fault Tolerance Loop*/
+
+							/* Fault Tolerance Loop
 
 
-			current_state = DHT22_Get_Data(&Current_Climate);
+			 current_state = DHT22_Get_Data(&Current_Climate);
 			if(current_state == 1){
 				dht_status = 1;
 				fault_tolerance_count = 0;
-				sensor_fault = 0;
+				sensor_fault = 0; */
 
-				/*Hysteresis (Deadband) Filter */
+				/*Hysteresis (Deadband) Filter
 				float temp_diff = Current_Climate.Temperature - Displayed_Climate.Temperature;
 				if (temp_diff < 0.0f) temp_diff = -temp_diff; //`abs()` logic for float to avoid importing heavy libraries - `<stdlib.h>`
 
@@ -95,7 +103,11 @@ int main(void)
 
 	}
 
+*/
+					// I2C Testing Loop
+	while(1) {
 
+	    }
 }
 
 void SysTick_Handler(void) {
