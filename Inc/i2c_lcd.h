@@ -44,9 +44,9 @@ void delay_us(uint16_t us);
 void TIM3_Init(void);
 void I2C_ScanBus(void);
 void I2C_Write(uint8_t target_address, uint8_t data);
-void LCD_Send_Cmd(uint8_t cmd);
-void LCD_Init(void);
-void LCD_Send_Data(uint8_t data);
-void LCD_Send_String(char *str);
+void LCD_Send_Cmd(uint8_t target_address, uint8_t cmd);
+void LCD_Init(uint8_t target_address);
+void LCD_Send_Data(uint8_t target_address, uint8_t data);
+void LCD_Send_String(uint8_t target_address, char *str);
 
 #endif /* I2C_LCD_H_ */

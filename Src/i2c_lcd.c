@@ -147,7 +147,7 @@ void I2C_Write(uint8_t target_address, uint8_t data) {
 				DATA PINS	/	Backlight	/	 Enable		/	Read/Write	 /	 RS[0(instruction)/1(data)]
 		*/
 
-void LCD_Send_Cmd(uint8_t cmd){
+void LCD_Send_Cmd(uint8_t target_address, uint8_t cmd){
 	uint8_t upper_nibble = (cmd & 0xF0U);
 	uint8_t lower_nibble = ((cmd << 4) & 0xF0U);
 
@@ -156,20 +156,20 @@ void LCD_Send_Cmd(uint8_t cmd){
 
 							//Pulse Upper Nibble(UN)
 	uint8_t UN_enable_high = upper_nibble | backlight | enable;
-	I2C_Write(0x27, UN_enable_high);
+	I2C_Write(target_address, UN_enable_high);
 	delay_us(1);
 
 	uint8_t UN_enable_low = upper_nibble | backlight;
-	I2C_Write(0x27, UN_enable_low);
+	I2C_Write(target_address, UN_enable_low);
 	delay_us(50);
 
 							//Pulse Lower Nibble(LN)
 	uint8_t LN_enable_high = lower_nibble | backlight | enable;
-	I2C_Write(0x27, LN_enable_high);
+	I2C_Write(target_address, LN_enable_high);
 	delay_us(1);
 
 	uint8_t LN_enable_low = lower_nibble | backlight;
-	I2C_Write(0x27, LN_enable_low);
+	I2C_Write(target_address, LN_enable_low);
 	delay_us(50);
 
 }
@@ -182,22 +182,22 @@ void LCD_Send_Cmd(uint8_t cmd){
 						/*	THIS FUNCTION WAS WRITTEN WITH THE AID OF GENERATIVE AI (Google Gemini, 2026).
 							 A PROMPT WAS GIVEN FOR ASSIGNMENT OF TASKS AT CURRENT LEVEL
 							 OF UNDERSTANDING TO AID COMPREHENSION AND FORSTER KNOWLEDGE	*/
-void LCD_Init(void) {
+void LCD_Init(uint8_t target_address) {
 	// 1. Wait for power to stabilize
 	delay_us(50000);
 
 	// 2. The specific wake-up sequence
-	LCD_Send_Cmd(0x30);
+	LCD_Send_Cmd(target_address, 0x30);
 	delay_us(5000);
 
-	LCD_Send_Cmd(0x30);
+	LCD_Send_Cmd(target_address, 0x30);
 	delay_us(1000);
 
-	LCD_Send_Cmd(0x30);
+	LCD_Send_Cmd(target_address, 0x30);
 	delay_us(10000);
 
 	// 3. Lock into 4-bit mode
-	LCD_Send_Cmd(0x20);
+	LCD_Send_Cmd(target_address, 0x20);
 	delay_us(10000);
 
 	    // ----------------------------------------------------
@@ -205,28 +205,28 @@ void LCD_Init(void) {
 	    // ----------------------------------------------------
 
 	    // Step 6: 2 lines, 5x8 font (Hex: 0x28)
-	LCD_Send_Cmd(0x28);
+	LCD_Send_Cmd(target_address, 0x28);
 	delay_us(1000);
 
 	    // Step 7: Display OFF (Hex: 0x08)
-	LCD_Send_Cmd(0x08);
+	LCD_Send_Cmd(target_address, 0x08);
 	delay_us(1000);
 
 	    // Step 8: Clear Display (Hex: 0x01) -> Needs a 2000us delay
-	LCD_Send_Cmd(0x01);
+	LCD_Send_Cmd(target_address, 0x01);
 	delay_us(2000);
 
 	    // Step 9: Entry Mode Set, Left-to-right (Hex: 0x06)
-	LCD_Send_Cmd(0x06);
+	LCD_Send_Cmd(target_address, 0x06);
 	delay_us(1000);
 
 	    // Step 10: Display ON, Cursor OFF (Hex: 0x0C)
-	LCD_Send_Cmd(0x0C);
+	LCD_Send_Cmd(target_address, 0x0C);
 	delay_us(1000);
 	}
 
 
-void LCD_Send_Data(uint8_t data){
+void LCD_Send_Data(uint8_t target_address ,uint8_t data){
 	uint8_t upper_nibble = (data & 0xF0U);
 	uint8_t lower_nibble = ((data << 4) & 0xF0U);
 
@@ -236,20 +236,20 @@ void LCD_Send_Data(uint8_t data){
 
 							//Pulse Upper Nibble(UN)
 	uint8_t UN_enable_high = upper_nibble | backlight |	RS | enable;
-	I2C_Write(0x27, UN_enable_high);
+	I2C_Write(target_address, UN_enable_high);
 	delay_us(1);
 
 	uint8_t UN_enable_low = upper_nibble | backlight |	RS ;
-	I2C_Write(0x27, UN_enable_low);
+	I2C_Write(target_address, UN_enable_low);
 	delay_us(50);
 
 							//Pulse Lower Nibble(LN)
 	uint8_t LN_enable_high = lower_nibble | backlight |	RS | enable;
-	I2C_Write(0x27, LN_enable_high);
+	I2C_Write(target_address, LN_enable_high);
 	delay_us(1);
 
 	uint8_t LN_enable_low = lower_nibble | backlight |	RS;
-	I2C_Write(0x27, LN_enable_low);
+	I2C_Write(target_address, LN_enable_low);
 	delay_us(50);
 
 }
@@ -257,9 +257,9 @@ void LCD_Send_Data(uint8_t data){
 // Requirement: Transmit a null-terminated string to the LCD.
 // Constraint: Must utilize the existing LCD_Send_Data wrapper.
 
-void LCD_Send_String(char *str) {
+void LCD_Send_String(uint8_t target_address, char *str) {
 
 	while(*str != '\0'){
-		LCD_Send_Data(*str++);
+		LCD_Send_Data(target_address, *str++);
 	}
 }

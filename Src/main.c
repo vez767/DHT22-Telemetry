@@ -15,7 +15,7 @@
  *
  ******************************************************************************
  */
-
+#define lcd_address	0x27
 
 #include <stdint.h>
 #include "dht_22.h"
@@ -46,8 +46,8 @@ int main(void)
 	I2C_GPIO_Init();
 	I2C_Config();
 
-	LCD_Init();
-	LCD_Send_String("SON :-(");
+	LCD_Init(lcd_address);
+	LCD_Send_String(lcd_address, "REFACTOR SUCCESS");
 
 /*
 
