@@ -20,6 +20,9 @@ void I2C_GPIO_Init(void){
 
 	GPIOB_AFRH &= ~(0xFFU << 0); // Clear pins 8 & 9
 	GPIOB_AFRH |= (0x44U << 0); // AF4 (0100)
+
+	GPIOB_PUPDR	&= ~(0xFU << 16);
+	GPIOB_PUPDR	|= (5U << 16); // Pull-Up Mode (01) - pins 8 & 9
 }
 
 void I2C_Config(void){
@@ -62,7 +65,7 @@ void TIM3_Init(void){
 							/*	THIS FUNCTION WAS WRITTEN WITH THE AID OF GENERATIVE AI (Google Gemini, 2026).
 							 	A PROMPT WAS GIVEN FOR ASSIGNMENT OF TASKS AT CURRENT LEVEL
 							 	OF UNDERSTANDING TO AID COMPREHENSION AND FORSTER KNOWLEDGE	*/
-void I2C_ScanBus(void) {
+ void I2C_ScanBus(void) {
 
     for (uint8_t i = 0; i < 128; i++) {
 

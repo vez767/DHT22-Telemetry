@@ -46,7 +46,9 @@ int main(void)
 	I2C_GPIO_Init();
 	I2C_Config();
 
-	I2C_ScanBus();
+	LCD_Init();
+	LCD_Send_String("SON :-(");
+
 /*
 
 	DHT22_Timer_Init();
