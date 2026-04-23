@@ -25,8 +25,8 @@ int32_t dht_status = 0;
 int8_t current_state;
 uint8_t fault_tolerance_count = 0;
 uint8_t sensor_fault = 0;
-DHT22_Data_t Current_Climate;
-DHT22_Data_t Displayed_Climate;
+DHT22_Data_t Current_Climate = {0.0f, 0.0f};
+DHT22_Data_t Displayed_Climate = {0.0f, 0.0f};
 
 void delay_ms(uint32_t ms){
 
@@ -41,40 +41,48 @@ int main(void)
 {
 
 	SCB_CPACR |= (0xF << 20); // FPU Calculator
-
-	TIM3_Init();
 	I2C_GPIO_Init();
 	I2C_Config();
-
-	LCD_Init(lcd_address);
-	LCD_Send_String(lcd_address, "REFACTOR SUCCESS");
-
-/*
+	TIM3_Init();
 
 	DHT22_Timer_Init();
 
-	Displayed_Climate.Temperature = 0.0f;
-	Displayed_Climate.Humidity = 0.0f;
-	 fault_tolerance_count = 0;
+
+	LCD_Init(lcd_address);
+
+							/* Static Dashboard*/
+	// Row 0
+	LCD_Set_Cursor(lcd_address, 0, 0);
+	LCD_Send_String(lcd_address, "TEMP:      C");
+
+	// Row 1
+	LCD_Set_Cursor(lcd_address, 1, 0);
+	LCD_Send_String(lcd_address, "HUM :      %");
+
+								/**/
+
+	char temp_string_box[16];
+	char hum_string_box[16];
+
 
 	while(1){
 
 		current_state = 0;
 
-		*/
 
 
 
-							/* Fault Tolerance Loop
+
+							/* Fault Tolerance Loop*/
 
 
 			 current_state = DHT22_Get_Data(&Current_Climate);
 			if(current_state == 1){
 				dht_status = 1;
 				fault_tolerance_count = 0;
-				sensor_fault = 0; */
+				sensor_fault = 0;
 
-				/*Hysteresis (Deadband) Filter
+				/*Hysteresis (Deadband) Filter*/
 				float temp_diff = Current_Climate.Temperature - Displayed_Climate.Temperature;
 				if (temp_diff < 0.0f) temp_diff = -temp_diff; //`abs()` logic for float to avoid importing heavy libraries - `<stdlib.h>`
 
@@ -103,13 +111,24 @@ int main(void)
 
 		delay_ms(2000); // Cooldown
 
+		Float_To_String(Displayed_Climate.Temperature, temp_string_box);
+		Float_To_String(Displayed_Climate.Humidity, hum_string_box);
+
+		LCD_Set_Cursor(lcd_address, 0, 6);
+		LCD_Send_String(lcd_address, temp_string_box);
+
+		LCD_Set_Cursor(lcd_address, 1, 6);
+		LCD_Send_String(lcd_address, hum_string_box);
+
+		delay_ms(2000);
+
 	}
 
-*/
-					// I2C Testing Loop
+
+				/*	// I2C Testing Loop
 	while(1) {
 
-	    }
+	    }*/
 }
 
 void SysTick_Handler(void) {

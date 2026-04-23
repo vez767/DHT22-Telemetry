@@ -48,5 +48,8 @@ void LCD_Send_Cmd(uint8_t target_address, uint8_t cmd);
 void LCD_Init(uint8_t target_address);
 void LCD_Send_Data(uint8_t target_address, uint8_t data);
 void LCD_Send_String(uint8_t target_address, char *str);
+void Int_To_String(uint32_t num, char *str);
+void Float_To_String(float num, char *str);
+void LCD_Set_Cursor(uint8_t target_address, uint8_t row, uint8_t col);
 
 #endif /* I2C_LCD_H_ */

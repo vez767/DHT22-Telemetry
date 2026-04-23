@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 #include "i2c_lcd.h"
-#include <stdio.h>
 
 
 void I2C_GPIO_Init(void){
@@ -263,3 +262,90 @@ void LCD_Send_String(uint8_t target_address, char *str) {
 		LCD_Send_Data(target_address, *str++);
 	}
 }
+
+// Requirement: Convert a positive integer into a null-terminated ASCII string.
+// Constraint: Do not use <stdio.h> or standard libraries.
+void Int_To_String(uint32_t num, char *str) {
+
+	int32_t i = 0;
+
+	if(num == 0) {
+	   str[i++] = '0'; // Store the character '0' and move the index
+	   str[i] = '\0';  // Null-terminate
+	   return;
+	}
+
+	while(num > 0){
+		str[i++] = (num % 10) + 0x30;
+		num /= 10;
+	}
+	str[i] = '\0';
+
+	int32_t incremental_index = 0;
+	int32_t decremental_index = i - 1;
+		char temp;
+
+		while (incremental_index < decremental_index) {
+		    temp = str[incremental_index];
+		    str[incremental_index] = str[decremental_index];
+		    str[decremental_index] = temp;
+		    incremental_index++;
+		    decremental_index--;
+		}
+
+}
+
+						 /*  THIS FUNCTION WAS WRITTEN WITH THE AID OF GENERATIVE AI (Google Gemini, 2026).
+							 A PROMPT WAS GIVEN FOR ASSIGNMENT OF TASKS AT CURRENT LEVEL
+							 OF UNDERSTANDING TO AID COMPREHENSION AND FOSTER KNOWLEDGE	*/
+
+void Float_To_String(float num, char *str) {
+
+    // 1. Extract the whole number (e.g., 24.5 becomes 24)
+    int32_t whole_part = (int32_t)num;
+
+    // 2. Extract the fraction and turn it into a whole number (e.g., 24.5 - 24.0 = 0.5 * 10 = 5)
+    float fraction_part = num - (float)whole_part;
+    int32_t fraction_int = (int32_t)(fraction_part * 10.0f);
+
+    // Safety check for negative fractions
+    if(fraction_int < 0) {
+        fraction_int = -fraction_int;
+    }
+
+    // YOUR TASK:
+    // 3. Send 'whole_part' and the 'str' array to your Int_To_String engine
+    Int_To_String(whole_part, str);
+
+
+    // 4. Find the end of the string (the '\0') so we know where to put the decimal
+    uint32_t i = 0;
+    while(str[i] != '\0') {
+        i++;
+    }
+
+    // 5. Overwrite the '\0' with a '.' and increment 'i' by 1
+    str[i++] = '.';
+
+
+    // 6. Send the 'fraction_int' to your Int_To_String engine.
+    // HINT: Pass the address of the exact slot where the fraction should start using &str[i]
+    Int_To_String(fraction_int, &str[i]);
+}
+
+// Requirement: Move the internal LCD DDRAM cursor to a specific row and column.
+// Constraint: Row must be 0 or 1. Column must be bounded to 0-15 to prevent off-screen memory writes.
+
+void LCD_Set_Cursor(uint8_t target_address, uint8_t row, uint8_t col) {
+    uint8_t cursor_cmd;
+
+    if (row == 0) {
+        cursor_cmd = 0x80U + col;        // Base address for Row 0 - 0x80.
+    } else {
+        cursor_cmd = 0xC0U + col;		// Base address for Row 1 - 0xC0.
+    }
+
+
+    LCD_Send_Cmd(target_address, cursor_cmd);
+}
+
