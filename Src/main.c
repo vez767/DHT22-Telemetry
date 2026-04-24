@@ -15,17 +15,21 @@
  *
  ******************************************************************************
  */
-
+#define lcd_address	0x27
 
 #include <stdint.h>
 #include "dht_22.h"
+#include "i2c_lcd.h"
 
 int32_t dht_status = 0;
+int32_t previous_dht_status = 1;
 int8_t current_state;
 uint8_t fault_tolerance_count = 0;
 uint8_t sensor_fault = 0;
-DHT22_Data_t Current_Climate;
-DHT22_Data_t Displayed_Climate;
+DHT22_Data_t Current_Climate = {0.0f, 0.0f};
+DHT22_Data_t Displayed_Climate = {0.0f, 0.0f};
+
+
 
 void delay_ms(uint32_t ms){
 
@@ -35,19 +39,43 @@ void delay_ms(uint32_t ms){
 
 }
 
+void reset_format(char *str){
+	uint8_t j = 0;
+	while(str[j] != '\0') {
+		j++;
+	}
+		str[j++] = ' ';
+		str[j] = '\0';
+}
+
 
 int main(void)
 {
 
 	SCB_CPACR |= (0xF << 20); // FPU Calculator
-
-
+	I2C_GPIO_Init();
+	I2C_Config();
+	TIM3_Init();
 
 	DHT22_Timer_Init();
 
-	Displayed_Climate.Temperature = 0.0f;
-	Displayed_Climate.Humidity = 0.0f;
-	 fault_tolerance_count = 0;
+
+	LCD_Init(lcd_address);
+
+							/* Static Dashboard*/
+	// Row 0
+	LCD_Set_Cursor(lcd_address, 0, 0);
+	LCD_Send_String(lcd_address, "TEMP:      C");
+
+	// Row 1
+	LCD_Set_Cursor(lcd_address, 1, 0);
+	LCD_Send_String(lcd_address, "HUM :      %");
+
+								/**/
+
+	char temp_string_box[16];
+	char hum_string_box[16];
+
 
 	while(1){
 
@@ -55,16 +83,18 @@ int main(void)
 
 
 
+
+
 							/* Fault Tolerance Loop*/
 
 
-			current_state = DHT22_Get_Data(&Current_Climate);
+			 current_state = DHT22_Get_Data(&Current_Climate);
 			if(current_state == 1){
 				dht_status = 1;
 				fault_tolerance_count = 0;
 				sensor_fault = 0;
 
-				/*Hysteresis (Deadband) Filter */
+				/*Hysteresis (Deadband) Filter*/
 				float temp_diff = Current_Climate.Temperature - Displayed_Climate.Temperature;
 				if (temp_diff < 0.0f) temp_diff = -temp_diff; //`abs()` logic for float to avoid importing heavy libraries - `<stdlib.h>`
 
@@ -85,17 +115,43 @@ int main(void)
 			                if (sensor_fault > 0) dht_status = 0xA98AC7;
 			                else{
 			                	dht_status = -10;
-			                	Displayed_Climate.Temperature = -999.0f; // Error Code
-			                	Displayed_Climate.Humidity = -999.0f; // Error Code
+			                	Displayed_Climate.Temperature = 999.0f; // Error Code
+			                	Displayed_Climate.Humidity = 999.0f; // Error Code
 			                }
 			            }
 			        }
 
 		delay_ms(2000); // Cooldown
 
+
+		Float_To_String(Displayed_Climate.Temperature, temp_string_box);
+		Float_To_String(Displayed_Climate.Humidity, hum_string_box);
+
+
+
+		if(current_state == 1 && previous_dht_status != dht_status) {
+
+		reset_format(hum_string_box) ;
+		reset_format(temp_string_box) ;
+		}
+
+		previous_dht_status = dht_status;
+
+		LCD_Set_Cursor(lcd_address, 0, 6);
+		LCD_Send_String(lcd_address, temp_string_box);
+
+		LCD_Set_Cursor(lcd_address, 1, 6);
+		LCD_Send_String(lcd_address, hum_string_box);
+
+		delay_ms(2000);
+
 	}
 
 
+				/*	// I2C Testing Loop
+	while(1) {
+
+	    }*/
 }
 
 void SysTick_Handler(void) {
