@@ -22,11 +22,14 @@
 #include "i2c_lcd.h"
 
 int32_t dht_status = 0;
+int32_t previous_dht_status = 1;
 int8_t current_state;
 uint8_t fault_tolerance_count = 0;
 uint8_t sensor_fault = 0;
 DHT22_Data_t Current_Climate = {0.0f, 0.0f};
 DHT22_Data_t Displayed_Climate = {0.0f, 0.0f};
+
+
 
 void delay_ms(uint32_t ms){
 
@@ -34,6 +37,15 @@ void delay_ms(uint32_t ms){
 		delay_us(1000);
 	}
 
+}
+
+void reset_format(char *str){
+	uint8_t j = 0;
+	while(str[j] != '\0') {
+		j++;
+	}
+		str[j++] = ' ';
+		str[j] = '\0';
 }
 
 
@@ -103,16 +115,27 @@ int main(void)
 			                if (sensor_fault > 0) dht_status = 0xA98AC7;
 			                else{
 			                	dht_status = -10;
-			                	Displayed_Climate.Temperature = -999.0f; // Error Code
-			                	Displayed_Climate.Humidity = -999.0f; // Error Code
+			                	Displayed_Climate.Temperature = 999.0f; // Error Code
+			                	Displayed_Climate.Humidity = 999.0f; // Error Code
 			                }
 			            }
 			        }
 
 		delay_ms(2000); // Cooldown
 
+
 		Float_To_String(Displayed_Climate.Temperature, temp_string_box);
 		Float_To_String(Displayed_Climate.Humidity, hum_string_box);
+
+
+
+		if(current_state == 1 && previous_dht_status != dht_status) {
+
+		reset_format(hum_string_box) ;
+		reset_format(temp_string_box) ;
+		}
+
+		previous_dht_status = dht_status;
 
 		LCD_Set_Cursor(lcd_address, 0, 6);
 		LCD_Send_String(lcd_address, temp_string_box);
