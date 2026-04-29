@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include "dht_22.h"
 #include "i2c_lcd.h"
+#include "iwdg.h"
 
 int32_t dht_status = 0;
 int32_t previous_dht_status = 1;
@@ -51,6 +52,7 @@ void reset_format(char *str){
 
 int main(void)
 {
+	IWDG_Init();
 
 	SCB_CPACR |= (0xF << 20); // FPU Calculator
 	I2C_GPIO_Init();
@@ -80,7 +82,7 @@ int main(void)
 	while(1){
 
 		current_state = 0;
-
+		IWDG_KR = 0xAAAA;
 
 
 
@@ -121,7 +123,9 @@ int main(void)
 			            }
 			        }
 
-		delay_ms(2000); // Cooldown
+			delay_ms(1000);
+			IWDG_KR = 0xAAAA; // Feed halfway through the cooldown
+			delay_ms(1000);
 
 
 		Float_To_String(Displayed_Climate.Temperature, temp_string_box);
@@ -143,7 +147,9 @@ int main(void)
 		LCD_Set_Cursor(lcd_address, 1, 6);
 		LCD_Send_String(lcd_address, hum_string_box);
 
-		delay_ms(2000);
+		delay_ms(1000);
+		IWDG_KR = 0xAAAA; // Feed halfway through the delay
+		delay_ms(1000);
 
 	}
 
