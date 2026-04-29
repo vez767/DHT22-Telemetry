@@ -46,6 +46,7 @@ The primary engineering goal of this module was flash memory optimization (bypas
 * **Decoupled HAL Architecture:** Strict separation between the generic peripheral drivers (`i2c_lcd.c`, `dht_22.c`) and the application layer (`main.c`).
 * **Memory-Safe String Parsing:** Standard C libraries like `<stdio.h>` (used for `sprintf`) and `<stdlib.h>` (often used for `atoi`, `atof`, and `abs`) were intentionally bypassed. Instead, custom parsing engines (`Int_To_String`, `Float_To_String`) and manual mathematical logic were engineered. This approach drastically reduces the flash memory footprint and prevents stack bloat.
 * **Flicker-Free UI Rendering:** By updating specific LCD coordinates (`LCD_Set_Cursor`) instead of issuing global clear commands, the static UI remains rock-solid during live data updates. Custom `Int_To_String` and `Float_To_String` engines were engineered to parse telemetry data securely.
+* Hardware Safety Net (IWDG): The system implements an Independent Watchdog Timer driven by the STM32's isolated 32kHz Low-Speed Internal (LSI) oscillator. If a physical hardware failure (like a severed ground wire) traps the CPU in an infinite polling loop, the IWDG physically asserts the system reset pin, preventing infinite hangs and returning the system to a safe state.
 
 
 ## Engineering Challenges & Hardware-in-the-Loop (HIL) Debugging
@@ -107,13 +108,18 @@ The system features a robust fault-tolerance loop designed to handle physical ha
 > https://github.com/user-attachments/assets/ef600555-bf89-4949-bc53-5aac1db04b27
 
 
+### 5. Hardware Failure & The Independent Watchdog (IWDG)
+Originally, physically disconnecting the DHT22's GND wire caused the MCU to freeze permanently while waiting for a signal line to pull low. To fix this, an Independent Watchdog (IWDG) was implemented, but configuring it exposed two silicon-level traps:
 
+- **Cross-Clock Domain Sync Rejection:** Attempting to configure the Watchdog Prescaler (`IWDG_PR`) using standard read-modify-write bitwise operations (`&=` followed by `|=`) caused a 0.5-second continuous death loop. The hardware raised the Prescaler Value Update (`PVU`) flag on the first operation, causing the APB1/LSI bridge to silently block the second CPU write. This was resolved by using a direct hex assignment (`IWDG_PR = 0x03U;`) to sync the 84 MHz CPU domain with the 32 kHz LSI domain in a single clock cycle.
+
+- **LSI Oscillator Variance Constraint:** STMicroelectronics documents the LSI as a "32 kHz" clock, but the electrical characteristics datasheet revealed it is an internal RC oscillator that fluctuates between 17 kHz and 47 kHz depending on temperature. The theoretical Reload (RLR) value resulted in premature bites. The system was re-engineered for the worst-case maximum frequency (47 kHz) by increasing the RLR to 4000, guaranteeing a safe 2.7-second timeout.
 
 
 
 ## Known Limitations & Future Roadmap
-* **GND Disconnect Hard-Fault:** Currently, the software fault-tolerance loop successfully catches *Signal wire* disconnects. However, physically pulling the *GND wire* causes the STM32 debugger to timeout and the `current_state` to drop to 0, essentially locking the system. This hardware-level lockup is slated to be resolved in the next architectural phase using the STM32's Independent Watchdog (IWDG) to force a silicon-level reboot.
 * **Negative Number Parsing:** The custom `Int_To_String` bare-metal engine does not currently evaluate negative numbers (`-`). Error codes must be handled as positive integers or floats until advanced string manipulation is introduced.
+*  **Target v1.2.0 (Firmware Integrity):** Implementation of hardware Cyclic Redundancy Check (CRC). This will verify the integrity of the compiled application in Flash memory upon boot, guaranteeing the system safely halts before executing potentially corrupted instruction code.
 
 
 ## Acknowledgments & References
