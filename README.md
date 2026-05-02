@@ -3,8 +3,8 @@
 ## Overview
 This repository contains a custom hardware abstraction layer (HAL) built for the STM32 Nucleo series. The project functions as a fault-tolerant environmental data pipeline:
 1. The STM32 reads raw data from a DHT22 sensor using a custom 1-Wire protocol, adhering to the manufacturer's microsecond delay timings.
-2. The acquired "Current Climate" is passed through an asynchronous software fault-tolerance loop.
-3. The resulting "Displayed Climate" is transmitted via I2C to a Freenove 1602 LCD.
+2. The acquired Current Climate is passed through an asynchronous software fault-tolerance loop.
+3. The resulting Displayed Climate is transmitted via I2C to a Freenove 1602 LCD.
 
 The primary engineering goal of this module was flash memory optimization (bypassing standard C libraries), robust asynchronous hardware fault-tolerance, and implementing a flickerless UI by updating LCD memory.
 
@@ -113,10 +113,10 @@ Originally, physically disconnecting the DHT22's GND wire caused the MCU to free
 
 - **Cross-Clock Domain Sync Rejection:** Attempting to configure the Watchdog Prescaler (`IWDG_PR`) using standard read-modify-write bitwise operations (`&=` followed by `|=`) caused a 0.5-second continuous death loop. The hardware raised the Prescaler Value Update (`PVU`) flag on the first operation, causing the APB1/LSI bridge to silently block the second CPU write. This was resolved by using a direct hex assignment (`IWDG_PR = 0x03U;`) to sync the 84 MHz CPU domain with the 32 kHz LSI domain in a single clock cycle.
 
-- **LSI Oscillator Variance Constraint:** STMicroelectronics documents the LSI as a "32 kHz" clock, but the electrical characteristics datasheet revealed it is an internal RC oscillator that fluctuates between 17 kHz and 47 kHz depending on temperature. The theoretical Reload (RLR) value resulted in premature bites. The system was re-engineered for the worst-case maximum frequency (47 kHz) by increasing the RLR to 4000, guaranteeing a safe 2.7-second timeout.
+- **LSI Oscillator Variance Constraint:** STMicroelectronics documents the LSI as a 32 kHz clock, but the electrical characteristics datasheet revealed it is an internal RC oscillator that fluctuates between 17 kHz and 47 kHz depending on temperature. The theoretical Reload (RLR) value resulted in premature bites. The system was re-engineered for the worst-case maximum frequency (47 kHz) by increasing the RLR to 4000, guaranteeing a safe 2.7-second timeout.
 
 
-*  **Hardware-Accelerated Memory Integrity (CRC) (v1.2.0) - Proof of Concept:** The architecture currently includes a demo of a low-level Cyclic Redundancy Check driver (`crc.c`, `crc.h`).A fault-injection logic test (`CRC_Test()`) was implemented to mathematically prove the silicon can catch memory degradation before integrating a full system bootloader. By intentionally carrying out a test array, the hardware successfully caught the corrupted memory state. This capability is currently encapsulated and parked in the mainline branch, serving as the verified foundational logic for a future secure bootloader.
+## 6. **Hardware-Accelerated Memory Integrity (CRC) (v1.2.0) - Proof of Concept:** The architecture currently includes a demo of a low-level Cyclic Redundancy Check driver (`crc.c`, `crc.h`).A fault-injection logic test (`CRC_Test()`) was implemented to mathematically prove the silicon can catch memory degradation before integrating a full system bootloader. By intentionally carrying out a test array, the hardware successfully caught the corrupted memory state. This capability is currently encapsulated and parked in the mainline branch, serving as the verified foundational logic for a future secure bootloader.
 
 ### **Live Debugger Verification (Fault Injection):**
 | <img src="https://github.com/user-attachments/assets/5c0438d4-564f-487e-81da-a305c18e19d3" width="500"> | <img src="https://github.com/user-attachments/assets/54d7e9f8-e889-42f9-8f50-f015e1dd6c41" width="400"> |
