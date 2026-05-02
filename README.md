@@ -90,7 +90,7 @@ During live debugging, acquired temperature and humidity values were manifesting
  > <img width="735" height="475" alt="Screenshot 2026-04-25 160945" src="https://github.com/user-attachments/assets/ea4095ad-ffeb-4024-b354-9e2ec5543233" />
 
  
- > <img width="4032" height="2016" alt="meh" src="https://github.com/user-attachments/assets/9d2b9993-cf93-484d-909a-61d162182551" />
+ > <img width="735" height="475" alt="meh" src="https://github.com/user-attachments/assets/9d2b9993-cf93-484d-909a-61d162182551" />
 
 
 
@@ -116,10 +116,18 @@ Originally, physically disconnecting the DHT22's GND wire caused the MCU to free
 - **LSI Oscillator Variance Constraint:** STMicroelectronics documents the LSI as a "32 kHz" clock, but the electrical characteristics datasheet revealed it is an internal RC oscillator that fluctuates between 17 kHz and 47 kHz depending on temperature. The theoretical Reload (RLR) value resulted in premature bites. The system was re-engineered for the worst-case maximum frequency (47 kHz) by increasing the RLR to 4000, guaranteeing a safe 2.7-second timeout.
 
 
+*  **Hardware-Accelerated Memory Integrity (CRC) (v1.2.0) - Proof of Concept:** The architecture currently includes a demo of a low-level Cyclic Redundancy Check driver (`crc.c`, `crc.h`).A fault-injection logic test (`CRC_Test()`) was implemented to mathematically prove the silicon can catch memory degradation before integrating a full system bootloader. By intentionally carrying out a test array, the hardware successfully caught the corrupted memory state. This capability is currently encapsulated and parked in the mainline branch, serving as the verified foundational logic for a future secure bootloader.
+
+### **Live Debugger Verification (Fault Injection):**
+| <img src="https://github.com/user-attachments/assets/5c0438d4-564f-487e-81da-a305c18e19d3" width="500"> | <img src="https://github.com/user-attachments/assets/54d7e9f8-e889-42f9-8f50-f015e1dd6c41" width="400"> |
+| :--- | :--- |
+| _Fig 1: Baseline memory verification (crc_check = 1)._ | _Fig 2: Simulated memory corruption successfully caught by the hardware engine (crc_check = 0)._ |
+
+
 
 ## Known Limitations & Future Roadmap
 * **Negative Number Parsing:** The custom `Int_To_String` bare-metal engine does not currently evaluate negative numbers (`-`). Error codes must be handled as positive integers or floats until advanced string manipulation is introduced.
-*  **Target v1.2.0 (Firmware Integrity):** Implementation of hardware Cyclic Redundancy Check (CRC). This will verify the integrity of the compiled application in Flash memory upon boot, guaranteeing the system safely halts before executing potentially corrupted instruction code.
+* **Target v1.3.0 (Advanced Power Management & Concurrency):** Migration away from blocking CPU delays (`delay_ms`) by implementing Direct Memory Access (DMA) and the Nested Vectored Interrupt Controller (NVIC). This will allow the MCU to offload sensor polling and I2C transmissions to the hardware, freeing the CPU to enter low-power sleep states.
 
 
 ## Acknowledgments & References
