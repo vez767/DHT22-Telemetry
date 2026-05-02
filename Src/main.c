@@ -21,6 +21,8 @@
 #include "dht_22.h"
 #include "i2c_lcd.h"
 #include "iwdg.h"
+#include "crc.h"
+
 
 int32_t dht_status = 0;
 int32_t previous_dht_status = 1;
@@ -49,12 +51,39 @@ void reset_format(char *str){
 		str[j] = '\0';
 }
 
+void CRC_Test(void){
+
+	uint32_t ran_hex[5];
+	uint32_t ideal_crc = 0;
+	uint32_t actual_crc = 0;
+	volatile uint8_t crc_check = 1;
+
+		ran_hex[0] = 0x11223344;
+		ran_hex[1] = 0x6525AE59;
+		ran_hex[2] = 0x51728340;
+		ran_hex[3] = 0x01A03E44;
+		ran_hex[4] = 0x91A2374D;
+
+
+		ideal_crc = CRC_Calc(ran_hex, 5);
+
+		ran_hex[2] = ran_hex[2] + 1 ;
+		actual_crc = CRC_Calc(ran_hex, 5);
+
+		if(actual_crc == ideal_crc) crc_check = 1;
+		else crc_check = 0;
+}
+
 
 int main(void)
 {
+	FPU_Init();
+
+	CRC_Init();
+ //	CRC_Test(); This is a Cyclic Redundancy Logic test: It does not actually check data integrity for now.
+
 	IWDG_Init();
 
-	SCB_CPACR |= (0xF << 20); // FPU Calculator
 	I2C_GPIO_Init();
 	I2C_Config();
 	TIM3_Init();
