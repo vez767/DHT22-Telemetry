@@ -36,4 +36,8 @@ int8_t DHT22_Check_Response(void);
 uint8_t DHT22_Read_Byte(void);
 int8_t DHT22_Get_Data(DHT22_Data_t *target);
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
 #endif
