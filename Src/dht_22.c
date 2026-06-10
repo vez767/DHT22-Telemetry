@@ -1,7 +1,10 @@
 #include <stdint.h>
 #include "dht_22.h"
+<<<<<<< HEAD
 #include "FreeRTOS.h"
 #include "task.h"
+=======
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
 
 
 /**
@@ -27,6 +30,7 @@ void DHT22_Start(void) {
 
 	GPIOA_PUPDR  &= ~(3U << 0); // Clear
 	GPIOA_PUPDR  |= (1U << 0);
+<<<<<<< HEAD
 	vTaskDelay(pdMS_TO_TICKS(2));
 
 	GPIOA_MODER |= (1 << 0); // Output mode
@@ -37,6 +41,18 @@ void DHT22_Start(void) {
 
 	 // Wait 55 microseconds for the resistor to pull the line HIGH!
 	delay_us(2);
+=======
+	delay_us(1000);
+
+	 GPIOA_MODER |= (1 << 0); // Output mode
+	 GPIOA_ODR &= ~(1U << 0); // drop voltage in PA0
+	 delay_us(1100);
+
+	 GPIOA_MODER &= ~(3U << 0); // Input
+
+	 // Wait 55 microseconds for the resistor to pull the line HIGH!
+	 delay_us(2);
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
 
 }
 
@@ -129,6 +145,7 @@ int8_t DHT22_Get_Data(DHT22_Data_t *target) {
     // Handshake
     DHT22_Start();
 
+<<<<<<< HEAD
     taskENTER_CRITICAL();
 
     int8_t response = DHT22_Check_Response();
@@ -136,14 +153,21 @@ int8_t DHT22_Get_Data(DHT22_Data_t *target) {
     	taskEXIT_CRITICAL();
     	return response; // Return the exact error code (-10, -11, -12)
     }
+=======
+    int8_t response = DHT22_Check_Response();
+    if (response != 1) return response; // Return the exact error code (-10, -11, -12)
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
 
     // Read the 5 bytes
     for (int i = 0; i < 5; i++) {
         data[i] = DHT22_Read_Byte();
     }
 
+<<<<<<< HEAD
     taskEXIT_CRITICAL();
 
+=======
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
     // Checksum Validation
     if (data[4] != (uint8_t)(data[0] + data[1] + data[2] + data[3])) {
         return -2; // Checksum error

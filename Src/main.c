@@ -15,6 +15,7 @@
  *
  ******************************************************************************
  */
+<<<<<<< HEAD
 
 #include <stdint.h>
 #include "fpu_init.h"
@@ -45,4 +46,187 @@ int main(void)
 	vTaskStartScheduler();
 
 	while(1){}
+=======
+#define lcd_address	0x27
+
+#include <stdint.h>
+#include "dht_22.h"
+#include "i2c_lcd.h"
+#include "iwdg.h"
+#include "crc.h"
+
+
+int32_t dht_status = 0;
+int32_t previous_dht_status = 1;
+int8_t current_state;
+uint8_t fault_tolerance_count = 0;
+uint8_t sensor_fault = 0;
+DHT22_Data_t Current_Climate = {0.0f, 0.0f};
+DHT22_Data_t Displayed_Climate = {0.0f, 0.0f};
+
+
+
+void delay_ms(uint32_t ms){
+
+	for(uint32_t i = 0; i < ms ; i++){
+		delay_us(1000);
+	}
+
+}
+
+void reset_format(char *str){
+	uint8_t j = 0;
+	while(str[j] != '\0') {
+		j++;
+	}
+		str[j++] = ' ';
+		str[j] = '\0';
+}
+
+void CRC_Test(void){
+
+	uint32_t ran_hex[5];
+	uint32_t ideal_crc = 0;
+	uint32_t actual_crc = 0;
+	volatile uint8_t crc_check = 1;
+
+		ran_hex[0] = 0x11223344;
+		ran_hex[1] = 0x6525AE59;
+		ran_hex[2] = 0x51728340;
+		ran_hex[3] = 0x01A03E44;
+		ran_hex[4] = 0x91A2374D;
+
+
+		ideal_crc = CRC_Calc(ran_hex, 5);
+
+		ran_hex[2] = ran_hex[2] + 1 ;
+		actual_crc = CRC_Calc(ran_hex, 5);
+
+		if(actual_crc == ideal_crc) crc_check = 1;
+		else crc_check = 0;
+}
+
+
+int main(void)
+{
+	FPU_Init();
+
+	CRC_Init();
+ //	CRC_Test(); This is a Cyclic Redundancy Logic test: It does not actually check data integrity for now.
+
+	IWDG_Init();
+
+	I2C_GPIO_Init();
+	I2C_Config();
+	TIM3_Init();
+
+	DHT22_Timer_Init();
+
+
+	LCD_Init(lcd_address);
+
+							/* Static Dashboard*/
+	// Row 0
+	LCD_Set_Cursor(lcd_address, 0, 0);
+	LCD_Send_String(lcd_address, "TEMP:      C");
+
+	// Row 1
+	LCD_Set_Cursor(lcd_address, 1, 0);
+	LCD_Send_String(lcd_address, "HUM :      %");
+
+								/**/
+
+	char temp_string_box[16];
+	char hum_string_box[16];
+
+
+	while(1){
+
+		current_state = 0;
+		IWDG_KR = 0xAAAA;
+
+
+
+
+							/* Fault Tolerance Loop*/
+
+
+			 current_state = DHT22_Get_Data(&Current_Climate);
+			if(current_state == 1){
+				dht_status = 1;
+				fault_tolerance_count = 0;
+				sensor_fault = 0;
+
+				/*Hysteresis (Deadband) Filter*/
+				float temp_diff = Current_Climate.Temperature - Displayed_Climate.Temperature;
+				if (temp_diff < 0.0f) temp_diff = -temp_diff; //`abs()` logic for float to avoid importing heavy libraries - `<stdlib.h>`
+
+				float humidity_diff = Current_Climate.Humidity - Displayed_Climate.Humidity;
+				if (humidity_diff < 0.0f) humidity_diff = -humidity_diff;
+
+				if(temp_diff >= 0.5) Displayed_Climate.Temperature = Current_Climate.Temperature;
+				if(humidity_diff >= 1.0) Displayed_Climate.Humidity = Current_Climate.Humidity;
+
+			}else if (current_state == -10){
+				fault_tolerance_count += 2;
+			}
+			else sensor_fault++;
+
+
+			if (current_state != 1) {
+			            if (fault_tolerance_count >= 6 || sensor_fault > 0) {
+			                if (sensor_fault > 0) dht_status = 0xA98AC7;
+			                else{
+			                	dht_status = -10;
+			                	Displayed_Climate.Temperature = 999.0f; // Error Code
+			                	Displayed_Climate.Humidity = 999.0f; // Error Code
+			                }
+			            }
+			        }
+
+			delay_ms(1000);
+			IWDG_KR = 0xAAAA; // Feed halfway through the cooldown
+			delay_ms(1000);
+
+
+		Float_To_String(Displayed_Climate.Temperature, temp_string_box);
+		Float_To_String(Displayed_Climate.Humidity, hum_string_box);
+
+
+
+		if(current_state == 1 && previous_dht_status != dht_status) {
+
+		reset_format(hum_string_box) ;
+		reset_format(temp_string_box) ;
+		}
+
+		previous_dht_status = dht_status;
+
+		LCD_Set_Cursor(lcd_address, 0, 6);
+		LCD_Send_String(lcd_address, temp_string_box);
+
+		LCD_Set_Cursor(lcd_address, 1, 6);
+		LCD_Send_String(lcd_address, hum_string_box);
+
+		delay_ms(1000);
+		IWDG_KR = 0xAAAA; // Feed halfway through the delay
+		delay_ms(1000);
+
+	}
+
+
+				/*	// I2C Testing Loop
+	while(1) {
+
+	    }*/
+}
+
+void SysTick_Handler(void) {
+    // Catch rogue 1ms ticks and do nothing to prevent crashing
+}
+
+void HardFault_Handler(void) {
+    // Catch severe memory errors
+    while(1);
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
 }

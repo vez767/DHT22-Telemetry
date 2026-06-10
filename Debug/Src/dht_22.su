@@ -1,6 +1,13 @@
+<<<<<<< HEAD
 ../Src/dht_22.c:13:7:delay_us	16	static
 ../Src/dht_22.c:22:6:DHT22_Start	8	static
 ../Src/dht_22.c:45:6:DHT22_Timer_Init	4	static
 ../Src/dht_22.c:57:8:DHT22_Check_Response	16	static
 ../Src/dht_22.c:92:9:DHT22_Read_Byte	24	static
 ../Src/dht_22.c:125:8:DHT22_Get_Data	24	static
+=======
+../Src/dht_22.c:12:6:DHT22_Start	8	static
+../Src/dht_22.c:27:7:Delay_us	16	static
+../Src/dht_22.c:37:6:DHT22_Timer_Init	4	static
+../Src/dht_22.c:47:9:DHT22_Check_Response	16	static
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f

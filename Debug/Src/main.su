@@ -1,2 +1,6 @@
+<<<<<<< HEAD
 ../Src/main.c:28:6:vClimateTask	16	static
 ../Src/main.c:38:5:main	16	static
+=======
+../Src/main.c:23:5:main	4	static
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f

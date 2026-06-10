@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
+<<<<<<< HEAD
 	<name>freeRTOS-dht22</name>
+=======
+	<name>DHT22_1Wire_Telemetery</name>
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
 	<comment></comment>
 	<projects>
 	</projects>
