@@ -15,6 +15,38 @@
  *
  ******************************************************************************
  */
+<<<<<<< HEAD
+
+#include <stdint.h>
+#include "fpu_init.h"
+#include "dht_22.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+DHT22_Data_t Current_Climate = {0.0f, 0.0f};
+
+
+void vClimateTask(void *pvParameters){
+
+	vTaskDelay(pdMS_TO_TICKS(2000));
+
+	while(1){
+		DHT22_Get_Data(&Current_Climate);
+		vTaskDelay(pdMS_TO_TICKS(2000));  // delay to avoid overheating
+	}
+}
+
+int main(void)
+{
+	FPU_Init();
+	DHT22_Timer_Init();
+
+	 xTaskCreate(vClimateTask, "Climate", 128, NULL, 1, NULL);
+
+	vTaskStartScheduler();
+
+	while(1){}
+=======
 #define lcd_address	0x27
 
 #include <stdint.h>
@@ -196,4 +228,5 @@ void SysTick_Handler(void) {
 void HardFault_Handler(void) {
     // Catch severe memory errors
     while(1);
+>>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
 }
