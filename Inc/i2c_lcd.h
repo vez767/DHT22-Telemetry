@@ -1,7 +1,7 @@
 /*
  * i2c_lcd.h
  *
- *  Created on: 16 Apr 2026
+ *  Modified on: 14 June 2026
  *      Author: vez767
  */
 
@@ -51,5 +51,7 @@ void LCD_Send_String(uint8_t target_address, char *str);
 void Int_To_String(uint32_t num, char *str);
 void Float_To_String(float num, char *str);
 void LCD_Set_Cursor(uint8_t target_address, uint8_t row, uint8_t col);
+void vDisplayTask(void *pvParameters);
+void LCD_Task_Init(void);
 
 #endif /* I2C_LCD_H_ */

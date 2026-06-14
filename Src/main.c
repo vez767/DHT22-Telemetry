@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include "fpu_init.h"
 #include "dht_22.h"
+#include "i2c_lcd.h"
 #include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -32,11 +33,14 @@ int main(void)
 {
 	FPU_Init();
 	DHT22_Timer_Init();
+	I2C_GPIO_Init();
+	I2C_Config();
 
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
 
 	if( xClimateQueue != NULL){
 		DHT22_Task_Init();
+		LCD_Task_Init();
 		vTaskStartScheduler();
 	}
 
