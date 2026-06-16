@@ -22,7 +22,7 @@
 #define GPIOB_MODER			(*(volatile uint32_t *)(GPIOB_BASE + 0x00))
 #define GPIOB_OTYPER		(*(volatile uint32_t *)(GPIOB_BASE + 0x04))
 #define GPIOB_AFRH			(*(volatile uint32_t *)(GPIOB_BASE + 0x24))
-#define GPIOB_PUPDR			(*(volatile uint32_t *)(GPIOA_BASE + 0x0C))
+#define GPIOB_PUPDR			(*(volatile uint32_t *)(GPIOB_BASE + 0x0C))
 
 #define I2C_CR1 			(*(volatile uint32_t *)(I2C1_BASE + 0x00))
 #define I2C_CR2				(*(volatile uint32_t *)(I2C1_BASE + 0x04))

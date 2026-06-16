@@ -187,14 +187,14 @@ void LCD_Send_Cmd(uint8_t target_address, uint8_t cmd){
 							 OF UNDERSTANDING TO AID COMPREHENSION AND FORSTER KNOWLEDGE	*/
 void LCD_Init(uint8_t target_address) {
 	// 1. Wait for power to stabilize
-	vTaskDelay(pdMS_TO_TICKS(50));
+	vTaskDelay(pdMS_TO_TICKS(53));
 
 	// 2. The specific wake-up sequence
 	LCD_Send_Cmd(target_address, 0x30);
 	vTaskDelay(pdMS_TO_TICKS(5));
 
 	LCD_Send_Cmd(target_address, 0x30);
-	vTaskDelay(pdMS_TO_TICKS(1));
+	vTaskDelay(pdMS_TO_TICKS(2));
 
 	LCD_Send_Cmd(target_address, 0x30);
 	vTaskDelay(pdMS_TO_TICKS(10));
@@ -209,11 +209,11 @@ void LCD_Init(uint8_t target_address) {
 
 	    // Step 6: 2 lines, 5x8 font (Hex: 0x28)
 	LCD_Send_Cmd(target_address, 0x28);
-	vTaskDelay(pdMS_TO_TICKS(1));
+	vTaskDelay(pdMS_TO_TICKS(2));
 
 	    // Step 7: Display OFF (Hex: 0x08)
 	LCD_Send_Cmd(target_address, 0x08);
-	vTaskDelay(pdMS_TO_TICKS(1));
+	vTaskDelay(pdMS_TO_TICKS(2));
 
 	    // Step 8: Clear Display (Hex: 0x01) -> Needs a 2000us delay
 	LCD_Send_Cmd(target_address, 0x01);
@@ -221,11 +221,11 @@ void LCD_Init(uint8_t target_address) {
 
 	    // Step 9: Entry Mode Set, Left-to-right (Hex: 0x06)
 	LCD_Send_Cmd(target_address, 0x06);
-	vTaskDelay(pdMS_TO_TICKS(1));
+	vTaskDelay(pdMS_TO_TICKS(2));
 
 	    // Step 10: Display ON, Cursor OFF (Hex: 0x0C)
 	LCD_Send_Cmd(target_address, 0x0C);
-	vTaskDelay(pdMS_TO_TICKS(1));
+	vTaskDelay(pdMS_TO_TICKS(2));
 	}
 
 
@@ -353,10 +353,7 @@ void LCD_Set_Cursor(uint8_t target_address, uint8_t row, uint8_t col) {
     LCD_Send_Cmd(target_address, cursor_cmd);
 }
 
-void LCD_Clear(void){
-	LCD_Send_Cmd(0x27, 0x01);
-	vTaskDelay(pdMS_TO_TICKS(2));
-}
+
 
 void reset_format(char *str){
 	uint8_t j = 0;
@@ -376,11 +373,12 @@ void vDisplayTask(void *pvParameters){
     char hum_string_box[16];
 
     LCD_Init(0x27);
-    LCD_Clear();
+    LCD_Send_Cmd(0x27, 0x01);
+    	vTaskDelay(pdMS_TO_TICKS(3));
     LCD_Set_Cursor(0x27, 0, 0);
-    LCD_Send_String(0x27, "TEMP:      C");
+    LCD_Send_String(0x27, "TEMP:       C");
     LCD_Set_Cursor(0x27, 1, 0);
-    LCD_Send_String(0x27, "HUM :      %");
+    LCD_Send_String(0x27, "HUM :       %");
 
     while(1) {
     	if (xQueueReceive(xClimateQueue, &Received_Data, portMAX_DELAY) == pdPASS) {
