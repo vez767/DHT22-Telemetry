@@ -1,7 +1,9 @@
 #include <stdint.h>
 #include "dht_22.h"
+#include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
 
 /**
@@ -122,7 +124,7 @@ uint8_t DHT22_Read_Byte(void) {
 
 uint8_t data[5];
 
-int8_t DHT22_Get_Data(DHT22_Data_t *target) {
+int8_t DHT22_Get_Data(Climate_Payload_t *target) {
 
 							/*This Logic for data validation and storage was written with the aid of Generative AI (Google Gemini, 2026)*/
 
@@ -158,4 +160,29 @@ int8_t DHT22_Get_Data(DHT22_Data_t *target) {
     return 1;
 }
 
+extern QueueHandle_t xClimateQueue;
+
+void vClimateTask(void *pvParameters){
+
+	Climate_Payload_t Local_Data;
+	vTaskDelay(pdMS_TO_TICKS(2000));
+
+	while(1){
+
+		int8_t status = DHT22_Get_Data(&Local_Data);
+		Local_Data.Sensor_Status = status;
+
+	if(xClimateQueue != NULL) {
+	            xQueueSend(xClimateQueue, &Local_Data, pdMS_TO_TICKS(10));
+	        }
+
+	vTaskDelay(pdMS_TO_TICKS(2000));
+
+
+	}
+}
+
+void DHT22_Task_Init(void) {
+    xTaskCreate(vClimateTask, "Climate", 128, NULL, 1, NULL);
+}
 

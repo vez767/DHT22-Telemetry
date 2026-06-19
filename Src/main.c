@@ -20,30 +20,30 @@
 #include <stdint.h>
 #include "fpu_init.h"
 #include "dht_22.h"
+#include "i2c_lcd.h"
+#include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
-DHT22_Data_t Current_Climate = {0.0f, 0.0f};
+QueueHandle_t xClimateQueue;
 
-
-void vClimateTask(void *pvParameters){
-
-	vTaskDelay(pdMS_TO_TICKS(2000));
-
-	while(1){
-		DHT22_Get_Data(&Current_Climate);
-		vTaskDelay(pdMS_TO_TICKS(2000));  // delay to avoid overheating
-	}
-}
 
 int main(void)
 {
 	FPU_Init();
 	DHT22_Timer_Init();
+	I2C_GPIO_Init();
+	I2C_Config();
 
-	 xTaskCreate(vClimateTask, "Climate", 128, NULL, 1, NULL);
+	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
 
-	vTaskStartScheduler();
+	if( xClimateQueue != NULL){
+		DHT22_Task_Init();
+		LCD_Task_Init();
+		vTaskStartScheduler();
+	}
+
 
 	while(1){}
 }
