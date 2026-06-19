@@ -369,8 +369,13 @@ extern QueueHandle_t xClimateQueue;
 
 void vDisplayTask(void *pvParameters){
 	Climate_Payload_t Received_Data;
+	Climate_Payload_t Displayed_Data;
 	char temp_string_box[16];
     char hum_string_box[16];
+
+    Displayed_Data.Temperature = 0.0f;
+	Displayed_Data.Humidity = 0.0f;
+
 
     LCD_Init(0x27);
     LCD_Send_Cmd(0x27, 0x01);
@@ -382,25 +387,50 @@ void vDisplayTask(void *pvParameters){
 
     while(1) {
     	if (xQueueReceive(xClimateQueue, &Received_Data, portMAX_DELAY) == pdPASS) {
+    		uint8_t redraw_needed = 0;
 
-    		if (Received_Data.Sensor_Status != 1) {
+    									/*	HYSTERESIS FILTER	*/
+    		if (Received_Data.Sensor_Status == 1) {
+
+    			float temp_diff = Received_Data.Temperature - Displayed_Data.Temperature;
+    			if (temp_diff < 0.0f) temp_diff = -temp_diff;
+
+    			float hum_diff = Received_Data.Humidity - Displayed_Data.Humidity;
+    			if (hum_diff < 0.0f) hum_diff = -hum_diff;
+
+
+    			if(temp_diff >= 0.5f || hum_diff >= 1.0f) {
+
+    				Displayed_Data.Temperature = Received_Data.Temperature;
+    				Displayed_Data.Humidity = Received_Data.Humidity;
+
+    				redraw_needed = 1;
+    			}
+
+    		}else{
     		             // HARDWARE FAULT: Overwrite the payload with diagnostic codes.
 
-    			Received_Data.Temperature = 999.0f;
-    		    Received_Data.Humidity = 999.0f;
+    			Displayed_Data.Temperature = 999.0f;
+    			Displayed_Data.Humidity = 999.0f;
+    		    redraw_needed = 1;
     		}
 
-    		    Float_To_String(Received_Data.Temperature, temp_string_box);
-    		    Float_To_String(Received_Data.Humidity, hum_string_box);
+    							/*	Logic to save CPU cycles for only when character redrawing is needed	*/
 
-    		     reset_format(temp_string_box);
-    		     reset_format(hum_string_box);
+    		if (redraw_needed == 1){
 
-    		     LCD_Set_Cursor(0x27, 0, 6);
-    		     LCD_Send_String(0x27, temp_string_box);
+    			Float_To_String(Displayed_Data.Temperature, temp_string_box);
+    		    Float_To_String(Displayed_Data.Humidity, hum_string_box);
 
-    		     LCD_Set_Cursor(0x27, 1, 6);
-    		     LCD_Send_String(0x27, hum_string_box);
+    		    reset_format(temp_string_box);
+    		    reset_format(hum_string_box);
+
+    		    LCD_Set_Cursor(0x27, 0, 6);
+    		    LCD_Send_String(0x27, temp_string_box);
+
+    		    LCD_Set_Cursor(0x27, 1, 6);
+    		    LCD_Send_String(0x27, hum_string_box);
+    		}
     	}
     }
 }
