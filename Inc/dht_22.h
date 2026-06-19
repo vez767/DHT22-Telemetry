@@ -2,6 +2,7 @@
 #define DHT_22_H
 
 #include <stdint.h>
+#include "telemetry.h"
 
 #define TIM3_BASE		(0x40000400UL) // Unsigned Long
 #define RCC_BASE		(0x40023800UL)
@@ -24,20 +25,13 @@
 
 #define TIM3_EGR  (*(volatile uint32_t *)(TIM3_BASE + 0x14))
 
-typedef struct {
-    float Temperature;
-    float Humidity;
-} DHT22_Data_t;
-
 void delay_us(uint16_t us);
 void DHT22_Start(void);
 void DHT22_Timer_Init(void);
 int8_t DHT22_Check_Response(void);
 uint8_t DHT22_Read_Byte(void);
-int8_t DHT22_Get_Data(DHT22_Data_t *target);
+void DHT22_Task_Init(void);
+void vClimateTask(void *pvParameters);
+int8_t DHT22_Get_Data(Climate_Payload_t *target);
 
-<<<<<<< HEAD
-
-=======
->>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
 #endif
