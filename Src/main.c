@@ -21,6 +21,7 @@
 #include "fpu_init.h"
 #include "dht_22.h"
 #include "i2c_lcd.h"
+#include "mpu6050.h"
 #include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -36,11 +37,13 @@ int main(void)
 	I2C_GPIO_Init();
 	I2C_Config();
 
+
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
 
 	if( xClimateQueue != NULL){
 		DHT22_Task_Init();
 		LCD_Task_Init();
+		uint8_t mpu_id = MPU6050_Identity_Check();
 		vTaskStartScheduler();
 	}
 
