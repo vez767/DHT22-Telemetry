@@ -11,6 +11,9 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
+
+extern SemaphoreHandle_t xI2C1_Mutex;
 
 
 void I2C_GPIO_Init(void){
@@ -115,8 +118,11 @@ void TIM3_Init(void){
  * Constraints: CPU must wait for respective hardware flags before proceeding.
  */
 
+
+
 void I2C_Write(uint8_t target_address, uint8_t data) {
 
+	xSemaphoreTake(xI2C1_Mutex, portMAX_DELAY);
 	I2C_CR1 |= (1 << 8); //Start bit
 	while (!(I2C_SR1 & (1 << 0)));
 
@@ -133,6 +139,7 @@ void I2C_Write(uint8_t target_address, uint8_t data) {
 	while(!(I2C_SR1 & (1 << 2))); // BTF(Byte Transfer Finished) flag
 
 	I2C_CR1 |= (1 << 9);
+	xSemaphoreGive(xI2C1_Mutex);
 
 }
 
@@ -439,3 +446,6 @@ void LCD_Task_Init(void) {
     // Priority 2 ensures the screen draws data immediately when available
     xTaskCreate(vDisplayTask, "Display", 256, NULL, 2, NULL);
 }
+
+
+

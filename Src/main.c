@@ -26,8 +26,10 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 
 QueueHandle_t xClimateQueue;
+SemaphoreHandle_t xI2C1_Mutex;
 
 
 int main(void)
@@ -39,11 +41,13 @@ int main(void)
 
 
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
+	xI2C1_Mutex = xSemaphoreCreateMutex();
 
 	if( xClimateQueue != NULL){
 		DHT22_Task_Init();
 		LCD_Task_Init();
 		uint8_t mpu_id = MPU6050_Identity_Check();
+		MPU6050_Task_Init();
 		vTaskStartScheduler();
 	}
 

@@ -6,7 +6,12 @@
  */
 #include <stdint.h>
 #include "mpu6050.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
 
+extern SemaphoreHandle_t xI2C1_Mutex;
 
 uint8_t MPU6050_Identity_Check(void){
 
@@ -47,3 +52,96 @@ uint8_t MPU6050_Identity_Check(void){
 	return MPU6050_ID;
 }
 
+/* @brief   Thread-Safe MPU Register Read Sequence
+ * Requirement: Read a single 8-bit value from a specific MPU register. [MPU-REQ-004]
+ * Constraint: Must utilize FreeRTOS Mutex to prevent bus collisions.
+ */
+uint8_t MPU6050_Read_Register(uint8_t reg_addr) {
+    uint8_t received_data = 0;
+
+    xSemaphoreTake(xI2C1_Mutex ,portMAX_DELAY);
+
+    I2C_CR1 |= (1U << 8);
+    while (!(I2C_SR1 & (1U << 0)));
+
+    I2C_DR = MPU6050_ADDR_WRITE;
+    while (!(I2C_SR1 & (1U << 1)));
+
+    uint32_t overlook = I2C_SR1;
+    overlook = I2C_SR2;
+    (void)overlook;
+
+    I2C_DR = reg_addr;
+    while(!(I2C_SR1 & (1U << 7)));
+
+    I2C_CR1 |= (1U << 8);
+    while (!(I2C_SR1 & (1U << 0)));
+
+    I2C_DR = MPU6050_ADDR_READ;
+    while (!(I2C_SR1 & (1U << 1)));
+
+    I2C_CR1 &= ~(1U << 10);
+
+    overlook = I2C_SR1;
+    overlook = I2C_SR2;
+    (void)overlook;
+
+    I2C_CR1 |= (1U << 9);
+
+    while(!(I2C_SR1 & (1 << 6)));
+    received_data = I2C_DR;
+
+    xSemaphoreGive(xI2C1_Mutex);
+
+    return received_data;
+    }
+
+
+void vMPUTask(void *pvParameters){
+
+	MPU_Write_Register(MPU6050_PWR_MGMT_1, MPU6050_WAKEUP);
+
+	vTaskDelay(pdMS_TO_TICKS(50));
+
+	uint8_t gyro_h = 0; // Higher Gyroscope Value Byte
+	uint8_t gyro_l = 0;	// Lower Gyroscope Value Byte
+	int16_t gyro_x_combined = 0;
+
+	while(1){
+		gyro_h = MPU6050_Read_Register(MPU6050_GYRO_XOUT_H);
+		gyro_l = MPU6050_Read_Register(MPU6050_GYRO_XOUT_L);
+
+		gyro_x_combined = (int16_t)((gyro_h << 8) | gyro_l);
+
+		vTaskDelay(pdMS_TO_TICKS(500));
+	}
+}
+
+void MPU6050_Task_Init(void){
+	xTaskCreate(vMPUTask, "MPU_Task", 256, NULL, 1, NULL);
+}
+
+void MPU_Write_Register(uint8_t reg_addr, uint8_t data){
+
+	 xSemaphoreTake(xI2C1_Mutex ,portMAX_DELAY);
+
+	  I2C_CR1 |= (1U << 8);
+	  while (!(I2C_SR1 & (1U << 0)));
+
+	  I2C_DR = MPU6050_ADDR_WRITE;
+	  while (!(I2C_SR1 & (1U << 1)));
+
+	  uint32_t overlook = I2C_SR1;
+	  overlook = I2C_SR2;
+	  (void)overlook;
+
+	  I2C_DR = reg_addr;
+	  while(!(I2C_SR1 & (1U << 7)));
+
+	  I2C_DR = data;
+	  while(!(I2C_SR1 & (1U << 2))); //BTF -  BYTE TRANSFER FINISHED
+
+	  I2C_CR1 |= (1U << 9);
+
+	  xSemaphoreGive(xI2C1_Mutex);
+}
