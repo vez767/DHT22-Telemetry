@@ -12,6 +12,7 @@
 #include "semphr.h"
 
 extern SemaphoreHandle_t xI2C1_Mutex;
+extern QueueHandle_t xGyroQueue;
 
 uint8_t MPU6050_Identity_Check(void){
 
@@ -112,6 +113,10 @@ void vMPUTask(void *pvParameters){
 		gyro_l = MPU6050_Read_Register(MPU6050_GYRO_XOUT_L);
 
 		gyro_x_combined = (int16_t)((gyro_h << 8) | gyro_l);
+
+		gyro_x_combined = gyro_x_combined - 1930; //Calibration Offset
+
+		xQueueSend(xGyroQueue, &gyro_x_combined, pdMS_TO_TICKS(10));
 
 		vTaskDelay(pdMS_TO_TICKS(500));
 	}

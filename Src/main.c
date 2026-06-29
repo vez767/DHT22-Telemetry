@@ -29,6 +29,8 @@
 #include "semphr.h"
 
 QueueHandle_t xClimateQueue;
+QueueHandle_t xGyroQueue;
+
 SemaphoreHandle_t xI2C1_Mutex;
 
 
@@ -42,6 +44,11 @@ int main(void)
 
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
 	xI2C1_Mutex = xSemaphoreCreateMutex();
+	xGyroQueue = xQueueCreate(5, sizeof(int16_t));
+
+	if (xGyroQueue == NULL) {
+	        while(1); // To trap the code if creation fails
+	    }
 
 	if( xClimateQueue != NULL){
 		DHT22_Task_Init();

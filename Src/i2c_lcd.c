@@ -373,26 +373,58 @@ void reset_format(char *str){
 
 
 extern QueueHandle_t xClimateQueue;
+extern QueueHandle_t xGyroQueue;
 
 void vDisplayTask(void *pvParameters){
 	Climate_Payload_t Received_Data;
 	Climate_Payload_t Displayed_Data;
+
+
 	char temp_string_box[16];
     char hum_string_box[16];
+    char gyro_string_box[16];
 
     Displayed_Data.Temperature = 0.0f;
 	Displayed_Data.Humidity = 0.0f;
+	int16_t received_gyro = 0;
 
 
     LCD_Init(0x27);
     LCD_Send_Cmd(0x27, 0x01);
-    	vTaskDelay(pdMS_TO_TICKS(3));
+    vTaskDelay(pdMS_TO_TICKS(3));
+
+
     LCD_Set_Cursor(0x27, 0, 0);
-    LCD_Send_String(0x27, "TEMP:       C");
+    LCD_Send_String(0x27, "T:      H:      ");
     LCD_Set_Cursor(0x27, 1, 0);
-    LCD_Send_String(0x27, "HUM :       %");
+    LCD_Send_String(0x27, "Gx:             ");
 
     while(1) {
+    	if(xQueueReceive(xGyroQueue, &received_gyro, portMAX_DELAY) == pdPASS){
+
+    		if (received_gyro > -50 && received_gyro < 50) {
+    		     received_gyro = 0;
+    		}
+
+    		uint32_t gyro_reading = 0;
+    		LCD_Set_Cursor(0x27, 1, 4);
+
+    		if (received_gyro < 0) {
+    			LCD_Send_String(0x27, "-");
+    			gyro_reading = (uint32_t)(received_gyro * -1);
+    		} else {
+    		    LCD_Send_String(0x27, "+");
+    		    gyro_reading = (uint32_t)received_gyro;
+    		}
+
+
+
+    		Int_To_String(gyro_reading, gyro_string_box);
+    		reset_format(gyro_string_box);
+    		reset_format(gyro_string_box);
+    		LCD_Send_String(0x27, gyro_string_box);
+
+
     	if (xQueueReceive(xClimateQueue, &Received_Data, portMAX_DELAY) == pdPASS) {
     		uint8_t redraw_needed = 0;
 
@@ -432,11 +464,13 @@ void vDisplayTask(void *pvParameters){
     		    reset_format(temp_string_box);
     		    reset_format(hum_string_box);
 
-    		    LCD_Set_Cursor(0x27, 0, 6);
+    		    LCD_Set_Cursor(0x27, 0, 2);
     		    LCD_Send_String(0x27, temp_string_box);
 
-    		    LCD_Set_Cursor(0x27, 1, 6);
+    		    LCD_Set_Cursor(0x27, 0, 10);
     		    LCD_Send_String(0x27, hum_string_box);
+
+    			}
     		}
     	}
     }
