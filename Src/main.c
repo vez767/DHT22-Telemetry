@@ -21,12 +21,17 @@
 #include "fpu_init.h"
 #include "dht_22.h"
 #include "i2c_lcd.h"
+#include "mpu6050.h"
 #include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
 
 QueueHandle_t xClimateQueue;
+QueueHandle_t xGyroQueue;
+
+SemaphoreHandle_t xI2C1_Mutex;
 
 
 int main(void)
@@ -36,11 +41,20 @@ int main(void)
 	I2C_GPIO_Init();
 	I2C_Config();
 
+
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
+	xI2C1_Mutex = xSemaphoreCreateMutex();
+	xGyroQueue = xQueueCreate(5, sizeof(Gryo_Payload_t));
+
+	if (xGyroQueue == NULL) {
+	        while(1); // To trap the code if creation fails
+	    }
 
 	if( xClimateQueue != NULL){
 		DHT22_Task_Init();
 		LCD_Task_Init();
+		uint8_t mpu_id = MPU6050_Identity_Check();
+		MPU6050_Task_Init();
 		vTaskStartScheduler();
 	}
 
