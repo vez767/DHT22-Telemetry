@@ -447,7 +447,7 @@ void vDisplayTask(void *pvParameters){
     // Z-Axis ---->
 
     		  LCD_Set_Cursor(0x27, 1, 12);
-    		  if (Received_Gyro.X_Axis < 0){
+    		  if (Received_Gyro.Z_Axis < 0){
 
     			  LCD_Send_String(0x27, "-");
     		      gyro_reading = (uint32_t)(Received_Gyro.Z_Axis * -1);

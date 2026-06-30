@@ -29,15 +29,19 @@
 #define I2C_SR2				(*(volatile uint32_t *)(I2C1_BASE + 0x18))
 #define I2C_DR				(*(volatile uint32_t *)(I2C1_BASE + 0x10))
 
-#define MPU6050_ADDR_WRITE	0xD0
-#define MPU6050_ADDR_READ   0xD1
-#define MPU6050_WHO_AM_I    0x75
-#define MPU6050_EXPECTED_ID 0x70
-#define MPU6050_WAKEUP 0x00
+#define MPU6050_ADDR_WRITE		0xD0
+#define MPU6050_ADDR_READ   	0xD1
+#define MPU6050_WHO_AM_I    	0x75
+#define MPU6050_EXPECTED_ID 	0x70
+#define MPU6050_WAKEUP 			0x00
 
-#define MPU6050_PWR_MGMT_1  0x6B
-#define MPU6050_GYRO_XOUT_H 0x43
-#define MPU6050_GYRO_XOUT_L 0x44
+#define MPU6050_PWR_MGMT_1		0x6B
+#define MPU6050_GYRO_XOUT_H	 	0x43
+#define MPU6050_GYRO_XOUT_L 	0x44
+#define MPU6050_GYRO_YOUT_H    	0x45
+#define MPU6050_GYRO_YOUT_L    	0x46
+#define MPU6050_GYRO_ZOUT_H    	0x47
+#define MPU6050_GYRO_ZOUT_L    	0x48
 
 uint8_t MPU6050_Identity_Check(void);
 uint8_t MPU6050_Read_Register(uint8_t reg_addr);
