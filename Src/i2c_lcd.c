@@ -378,7 +378,7 @@ extern QueueHandle_t xGyroQueue;
 void vDisplayTask(void *pvParameters){
 	Climate_Payload_t Received_Data;
 	Climate_Payload_t Displayed_Data;
-
+	Gryo_Payload_t Received_Gyro;
 
 	char temp_string_box[16];
     char hum_string_box[16];
@@ -386,7 +386,6 @@ void vDisplayTask(void *pvParameters){
 
     Displayed_Data.Temperature = 0.0f;
 	Displayed_Data.Humidity = 0.0f;
-	int16_t received_gyro = 0;
 
 
     LCD_Init(0x27);
@@ -397,33 +396,72 @@ void vDisplayTask(void *pvParameters){
     LCD_Set_Cursor(0x27, 0, 0);
     LCD_Send_String(0x27, "T:      H:      ");
     LCD_Set_Cursor(0x27, 1, 0);
-    LCD_Send_String(0x27, "Gx:             ");
+    LCD_Send_String(0x27, "X:   Y:   Z:   ");
 
     while(1) {
-    	if(xQueueReceive(xGyroQueue, &received_gyro, portMAX_DELAY) == pdPASS){
+    	if(xQueueReceive(xGyroQueue, &Received_Gyro, portMAX_DELAY) == pdPASS){
 
-    		if (received_gyro > -50 && received_gyro < 50) {
-    		     received_gyro = 0;
-    		}
+    		if (Received_Gyro.X_Axis > -70 && Received_Gyro.X_Axis < 70) Received_Gyro.X_Axis = 0;
+    		if (Received_Gyro.Y_Axis > -70 && Received_Gyro.Y_Axis < 70) Received_Gyro.Y_Axis = 0;
+    		if (Received_Gyro.Z_Axis > -70 && Received_Gyro.Z_Axis < 70) Received_Gyro.Z_Axis = 0;
 
     		uint32_t gyro_reading = 0;
     		LCD_Set_Cursor(0x27, 1, 4);
 
-    		if (received_gyro < 0) {
+    // X-Axis ---->
+
+    		LCD_Set_Cursor(0x27, 1, 2);
+    		if (Received_Gyro.X_Axis < 0){
+
     			LCD_Send_String(0x27, "-");
-    			gyro_reading = (uint32_t)(received_gyro * -1);
-    		} else {
-    		    LCD_Send_String(0x27, "+");
-    		    gyro_reading = (uint32_t)received_gyro;
+    			gyro_reading = (uint32_t)(Received_Gyro.X_Axis * -1);
+
+    		}else {
+    			LCD_Send_String(0x27, "+");
+    			gyro_reading = (uint32_t)Received_Gyro.X_Axis;
     		}
+    		    Int_To_String(gyro_reading, gyro_string_box);
+    		    reset_format(gyro_string_box);
+    		    LCD_Send_String(0x27, gyro_string_box);
 
+    // <---
 
+    // Y-Axis ---->
+    		 LCD_Set_Cursor(0x27, 1, 7);
+    		 if (Received_Gyro.Y_Axis < 0){
 
-    		Int_To_String(gyro_reading, gyro_string_box);
-    		reset_format(gyro_string_box);
-    		reset_format(gyro_string_box);
-    		LCD_Send_String(0x27, gyro_string_box);
+    		     LCD_Send_String(0x27, "-");
+    		     gyro_reading = (uint32_t)(Received_Gyro.Y_Axis * -1);
 
+    		  }else {
+
+    		     LCD_Send_String(0x27, "+");
+    		     gyro_reading = (uint32_t)Received_Gyro.Y_Axis;
+    		  }
+    		     Int_To_String(gyro_reading, gyro_string_box);
+    		     reset_format(gyro_string_box);
+    		     LCD_Send_String(0x27, gyro_string_box);
+
+    // <----
+
+    // Z-Axis ---->
+
+    		  LCD_Set_Cursor(0x27, 1, 12);
+    		  if (Received_Gyro.X_Axis < 0){
+
+    			  LCD_Send_String(0x27, "-");
+    		      gyro_reading = (uint32_t)(Received_Gyro.Z_Axis * -1);
+
+    		  }else {
+
+    		      LCD_Send_String(0x27, "+");
+    		      gyro_reading = (uint32_t)Received_Gyro.Z_Axis;
+    		  }
+    		      Int_To_String(gyro_reading, gyro_string_box);
+    		      reset_format(gyro_string_box);
+    		      LCD_Send_String(0x27, gyro_string_box);
+
+    // <----
 
     	if (xQueueReceive(xClimateQueue, &Received_Data, portMAX_DELAY) == pdPASS) {
     		uint8_t redraw_needed = 0;

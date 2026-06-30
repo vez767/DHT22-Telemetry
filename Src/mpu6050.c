@@ -6,6 +6,7 @@
  */
 #include <stdint.h>
 #include "mpu6050.h"
+#include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -106,17 +107,37 @@ void vMPUTask(void *pvParameters){
 
 	uint8_t gyro_h = 0; // Higher Gyroscope Value Byte
 	uint8_t gyro_l = 0;	// Lower Gyroscope Value Byte
-	int16_t gyro_x_combined = 0;
+
+	Gryo_Payload_t mpu_data;
+
 
 	while(1){
+
+									/*X - Axis*/
+
 		gyro_h = MPU6050_Read_Register(MPU6050_GYRO_XOUT_H);
 		gyro_l = MPU6050_Read_Register(MPU6050_GYRO_XOUT_L);
 
-		gyro_x_combined = (int16_t)((gyro_h << 8) | gyro_l);
+		mpu_data.X_Axis = (int16_t)((gyro_h << 8) | gyro_l);
+		mpu_data.X_Axis = mpu_data.X_Axis - 1930; //Calibration Offset -  X_Axis
 
-		gyro_x_combined = gyro_x_combined - 1930; //Calibration Offset
+									/*Y - Axis*/
 
-		xQueueSend(xGyroQueue, &gyro_x_combined, pdMS_TO_TICKS(10));
+		gyro_h = MPU6050_Read_Register(MPU6050_GYRO_YOUT_H);
+		gyro_l = MPU6050_Read_Register(MPU6050_GYRO_YOUT_L);
+
+		mpu_data.Y_Axis = (int16_t)((gyro_h << 8) | gyro_l);
+		mpu_data.Y_Axis +=  1500; //Calibration Offset - Y_Axis
+
+									/*Z - Axis*/
+
+		gyro_h = MPU6050_Read_Register(MPU6050_GYRO_ZOUT_H);
+		gyro_l = MPU6050_Read_Register(MPU6050_GYRO_ZOUT_L);
+
+		mpu_data.Z_Axis = (int16_t)((gyro_h << 8) | gyro_l);
+		mpu_data.Z_Axis -=  30; //Calibration Offset - Y_Axis
+
+		xQueueSend(xGyroQueue, &mpu_data, pdMS_TO_TICKS(10));
 
 		vTaskDelay(pdMS_TO_TICKS(500));
 	}

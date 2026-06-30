@@ -44,7 +44,7 @@ int main(void)
 
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
 	xI2C1_Mutex = xSemaphoreCreateMutex();
-	xGyroQueue = xQueueCreate(5, sizeof(int16_t));
+	xGyroQueue = xQueueCreate(5, sizeof(Gryo_Payload_t));
 
 	if (xGyroQueue == NULL) {
 	        while(1); // To trap the code if creation fails
