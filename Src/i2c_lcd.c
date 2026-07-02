@@ -12,6 +12,7 @@
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
+#include "FreeRTOSConfig.h"
 
 extern SemaphoreHandle_t xI2C1_Mutex;
 
@@ -374,8 +375,10 @@ void reset_format(char *str){
 
 extern QueueHandle_t xClimateQueue;
 extern QueueHandle_t xGyroQueue;
+volatile UBaseType_t display_watermark = 0;
 
 void vDisplayTask(void *pvParameters){
+
 	Climate_Payload_t Received_Data;
 	Climate_Payload_t Displayed_Data;
 	Gryo_Payload_t Received_Gyro;
@@ -511,6 +514,7 @@ void vDisplayTask(void *pvParameters){
     			}
     		}
     	}
+        display_watermark = uxTaskGetStackHighWaterMark(NULL);
     }
 }
 
