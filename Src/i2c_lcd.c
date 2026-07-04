@@ -527,6 +527,7 @@ void vDisplayTask(void *pvParameters){
 
     		}
     	}
+        display_watermark = uxTaskGetStackHighWaterMark(NULL);
 
     }
    }
