@@ -96,7 +96,7 @@ The transition from a bare-metal low-level architecture to an RTOS environment i
 
 ### Pre-Flight Hardware Verification
 
-Before implementing the bare-metal C drivers, the MPU-6050 module required physical pin soldering. To ensure the silicon was not Dead on Arrival, the sensor was soldered and validated on a known-good stack (Arduino + [FastAArduino.Mngles](https://github.com/joaoaugustocz/mpu6050_FastAngles) library before integration into the STM32 architecture.
+Before implementing the bare-metal C drivers, the MPU-6050 module required physical pin soldering. To ensure the silicon was not Dead on Arrival, the sensor was soldered and validated on a known-good stack (Arduino + [FastAngles](https://github.com/joaoaugustocz/mpu6050_FastAngles) library before integration into the STM32 architecture.
 
 
 
@@ -141,8 +141,7 @@ During the bare-metal I2C register configuration, a low-level `WHO_AM_I` identit
       <img src="https://github.com/user-attachments/assets/425f3bea-b3a3-450b-82c4-ed68203acc00" height="220" style="object-fit: contain;" alt="Debugger WHO_AM_I value 112">
     </td>
     <td align="center" valign="middle">
-      <img src="https://github.com/user-attachments/assets/e4a73bcb-0a87-41be-b124-2de0afb95593"<img width="380" height="68" alt="Screenshot 2026-07-02 175731" src="https://github.com/user-attachments/assets/8c63561c-ffc7-46f1-b2a8-e699f053df26" />
- height="220" style="object-fit: contain;" alt="Zoomed debugger view">
+      <img src="https://github.com/user-attachments/assets/e4a73bcb-0a87-41be-b124-2de0afb95593" />
     </td>
   </tr>
 </table>
