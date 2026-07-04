@@ -522,15 +522,11 @@ void vDisplayTask(void *pvParameters){
     		    LCD_Set_Cursor(0x27, 0, 10);
     		    LCD_Send_String(0x27, hum_string_box);
 
-    			}
     		}
-<<<<<<< Updated upstream
     	}
-=======
-        display_watermark = uxTaskGetStackHighWaterMark(NULL);
->>>>>>> Stashed changes
+
     }
-}
+   }
 
 void LCD_Task_Init(void) {
     // Priority 2 ensures the screen draws data immediately when available
