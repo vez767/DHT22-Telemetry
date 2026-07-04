@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 "./FreeRTOS/croutine.o"
 "./FreeRTOS/event_groups.o"
 "./FreeRTOS/list.o"
@@ -10,10 +9,10 @@
 "./FreeRTOS/portable/port.o"
 "./Src/dht_22.o"
 "./Src/fpu_init.o"
-=======
-"./Src/dht_22.o"
->>>>>>> f003be09006fa0f1b50ddbaa1d9e19f3429e3d9f
+"./Src/i2c_lcd.o"
 "./Src/main.o"
+"./Src/mpu6050.o"
 "./Src/syscalls.o"
 "./Src/sysmem.o"
+"./Src/telemetry.o"
 "./Startup/startup_stm32f401retx.o"
