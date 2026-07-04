@@ -11,6 +11,10 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
+#include "semphr.h"
+#include "FreeRTOSConfig.h"
+
+extern SemaphoreHandle_t xI2C1_Mutex;
 
 
 void I2C_GPIO_Init(void){
@@ -115,8 +119,11 @@ void TIM3_Init(void){
  * Constraints: CPU must wait for respective hardware flags before proceeding.
  */
 
+
+
 void I2C_Write(uint8_t target_address, uint8_t data) {
 
+	xSemaphoreTake(xI2C1_Mutex, portMAX_DELAY);
 	I2C_CR1 |= (1 << 8); //Start bit
 	while (!(I2C_SR1 & (1 << 0)));
 
@@ -133,6 +140,7 @@ void I2C_Write(uint8_t target_address, uint8_t data) {
 	while(!(I2C_SR1 & (1 << 2))); // BTF(Byte Transfer Finished) flag
 
 	I2C_CR1 |= (1 << 9);
+	xSemaphoreGive(xI2C1_Mutex);
 
 }
 
@@ -366,12 +374,18 @@ void reset_format(char *str){
 
 
 extern QueueHandle_t xClimateQueue;
+extern QueueHandle_t xGyroQueue;
+volatile UBaseType_t display_watermark = 0;
 
 void vDisplayTask(void *pvParameters){
+
 	Climate_Payload_t Received_Data;
 	Climate_Payload_t Displayed_Data;
+	Gryo_Payload_t Received_Gyro;
+
 	char temp_string_box[16];
     char hum_string_box[16];
+    char gyro_string_box[16];
 
     Displayed_Data.Temperature = 0.0f;
 	Displayed_Data.Humidity = 0.0f;
@@ -379,14 +393,94 @@ void vDisplayTask(void *pvParameters){
 
     LCD_Init(0x27);
     LCD_Send_Cmd(0x27, 0x01);
-    	vTaskDelay(pdMS_TO_TICKS(3));
+    vTaskDelay(pdMS_TO_TICKS(3));
+
+
     LCD_Set_Cursor(0x27, 0, 0);
-    LCD_Send_String(0x27, "TEMP:       C");
+    LCD_Send_String(0x27, "T:      H:      ");
     LCD_Set_Cursor(0x27, 1, 0);
-    LCD_Send_String(0x27, "HUM :       %");
+    LCD_Send_String(0x27, "X:   Y:   Z:   ");
+
+    Gryo_Payload_t Displayed_Gyro = {9999, 9999, 9999};
 
     while(1) {
-    	if (xQueueReceive(xClimateQueue, &Received_Data, portMAX_DELAY) == pdPASS) {
+    	if(xQueueReceive(xGyroQueue, &Received_Gyro, pdMS_TO_TICKS(10)) == pdPASS){
+
+    		if (Received_Gyro.X_Axis > -70 && Received_Gyro.X_Axis < 70) Received_Gyro.X_Axis = 0;
+    		if (Received_Gyro.Y_Axis > -70 && Received_Gyro.Y_Axis < 70) Received_Gyro.Y_Axis = 0;
+    		if (Received_Gyro.Z_Axis > -70 && Received_Gyro.Z_Axis < 70) Received_Gyro.Z_Axis = 0;
+
+    		uint32_t gyro_reading = 0;
+
+    		if (Received_Gyro.X_Axis != Displayed_Gyro.X_Axis){  				// State-tracking Logic
+
+
+    // X-Axis ---->
+
+    			LCD_Set_Cursor(0x27, 1, 2);
+    			if (Received_Gyro.X_Axis < 0){
+
+    				LCD_Send_String(0x27, "-");
+    				gyro_reading = (uint32_t)(Received_Gyro.X_Axis * -1);
+
+    			}else {
+    				LCD_Send_String(0x27, "+");
+    				gyro_reading = (uint32_t)Received_Gyro.X_Axis;
+    			}
+    				Int_To_String(gyro_reading, gyro_string_box);
+    				reset_format(gyro_string_box);
+    				LCD_Send_String(0x27, gyro_string_box);
+
+    // <---
+    		}
+
+    		if(Received_Gyro.Y_Axis != Displayed_Gyro.Y_Axis){
+
+    // Y-Axis ---->
+    				LCD_Set_Cursor(0x27, 1, 7);
+    				if (Received_Gyro.Y_Axis < 0){
+
+    					LCD_Send_String(0x27, "-");
+    					gyro_reading = (uint32_t)(Received_Gyro.Y_Axis * -1);
+
+    				}else {
+
+    					LCD_Send_String(0x27, "+");
+    					gyro_reading = (uint32_t)Received_Gyro.Y_Axis;
+    				}
+    				Int_To_String(gyro_reading, gyro_string_box);
+    				reset_format(gyro_string_box);
+    				LCD_Send_String(0x27, gyro_string_box);
+
+    // <----
+    		}
+
+
+    // Z-Axis ---->
+    		if(Received_Gyro.Z_Axis != Displayed_Gyro.Z_Axis){
+    				LCD_Set_Cursor(0x27, 1, 12);
+    				if (Received_Gyro.Z_Axis < 0){
+
+    					LCD_Send_String(0x27, "-");
+    					gyro_reading = (uint32_t)(Received_Gyro.Z_Axis * -1);
+
+    				}else {
+
+    					LCD_Send_String(0x27, "+");
+    					gyro_reading = (uint32_t)Received_Gyro.Z_Axis;
+    				}
+    					Int_To_String(gyro_reading, gyro_string_box);
+    					reset_format(gyro_string_box);
+    					LCD_Send_String(0x27, gyro_string_box);
+
+    // <----
+    		}
+    			Displayed_Gyro.X_Axis = Received_Gyro.X_Axis;
+    		    Displayed_Gyro.Y_Axis = Received_Gyro.Y_Axis;
+    		    Displayed_Gyro.Z_Axis = Received_Gyro.Z_Axis;
+    	}
+
+    	if (xQueueReceive(xClimateQueue, &Received_Data, pdMS_TO_TICKS(10)) == pdPASS) {
     		uint8_t redraw_needed = 0;
 
     									/*	HYSTERESIS FILTER	*/
@@ -425,17 +519,23 @@ void vDisplayTask(void *pvParameters){
     		    reset_format(temp_string_box);
     		    reset_format(hum_string_box);
 
-    		    LCD_Set_Cursor(0x27, 0, 6);
+    		    LCD_Set_Cursor(0x27, 0, 2);
     		    LCD_Send_String(0x27, temp_string_box);
 
-    		    LCD_Set_Cursor(0x27, 1, 6);
+    		    LCD_Set_Cursor(0x27, 0, 10);
     		    LCD_Send_String(0x27, hum_string_box);
+
     		}
     	}
+        display_watermark = uxTaskGetStackHighWaterMark(NULL);
+
     }
-}
+   }
 
 void LCD_Task_Init(void) {
     // Priority 2 ensures the screen draws data immediately when available
     xTaskCreate(vDisplayTask, "Display", 256, NULL, 2, NULL);
 }
+
+
+
