@@ -7,6 +7,10 @@
 
 #include <stdint.h>
 #include "hcsr04.h"
+#include "microdelay.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
 
 volatile uint32_t capture_start = 0;
 volatile uint32_t capture_duration = 0;
@@ -16,7 +20,7 @@ void HCSR04_Init(void){
 
 	RCC_AHB1ENR |= (1U << 0); // GPIOA-EN
 
-	//PINS: PA9 - OUTPUT & PA1 - ALTERNATE FUNCTION
+	//PINS: D8(PA9) - OUTPUT & PA1 - ALTERNATE FUNCTION
 	GPIOA_MODER &= ~((3U << 2) | (3U << 18));
 	GPIOA_MODER |= ((2U << 2) | (1U << 18));
 
@@ -62,6 +66,42 @@ void TIM2_IRQHandler(void){
 
 		TIM2_SR &= ~(1U << 2); // Clear Flag
 	}
+}
 
 
+extern volatile uint32_t capture_duration;
+extern QueueHandle_t xDistanceQueue;
+
+void vHCSR04_Task(void *pvParameters) {
+    uint32_t distance_cm = 0;
+
+    while(1) {
+
+        GPIOA_BSRR = (1U << 9);          // PA9 - HIGH
+        delay_us(13);
+        GPIOA_BSRR = (1U << (9 + 16));   // PA9 - LOW
+
+        // SAFE STATE TIMEOUT (50ms)
+        vTaskDelay(pdMS_TO_TICKS(50));
+
+        // SAFETY CHECK
+        if (capture_duration > 0 && capture_duration < 38000) { // 38000us is roughly 6.5 meters; past sensor limit
+
+            distance_cm = capture_duration / 58;
+        } else {
+
+            distance_cm = 999; // Error Code
+        }
+
+        capture_duration = 0;
+
+        if (xDistanceQueue != NULL) {
+            xQueueSend(xDistanceQueue, &distance_cm, 0);
+        }
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+void HCSR04_Task_Init(void){
+	xTaskCreate(vHCSR04_Task , "vHCSR04_Task", 256, NULL, 3, NULL);
 }
