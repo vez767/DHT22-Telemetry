@@ -22,14 +22,19 @@
 #include "dht_22.h"
 #include "i2c_lcd.h"
 #include "mpu6050.h"
+#include "hcsr04.h"
+#include "microdelay.h"
 #include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
 #include "semphr.h"
 
+
+
 QueueHandle_t xClimateQueue;
 QueueHandle_t xGyroQueue;
+QueueHandle_t xDistanceQueue;
 
 SemaphoreHandle_t xI2C1_Mutex;
 
@@ -37,29 +42,32 @@ SemaphoreHandle_t xI2C1_Mutex;
 int main(void)
 {
 	FPU_Init();
-	DHT22_Timer_Init();
+	TIM3_Init();
 	I2C_GPIO_Init();
 	I2C_Config();
+	HCSR04_Init();
 
 
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
 	xI2C1_Mutex = xSemaphoreCreateMutex();
 	xGyroQueue = xQueueCreate(5, sizeof(Gryo_Payload_t));
+	xDistanceQueue = xQueueCreate(5, sizeof(uint32_t));
 
-	if (xGyroQueue == NULL) {
-	        while(1); // To trap the code if creation fails
-	    }
 
-	if( xClimateQueue != NULL){
+	if( xClimateQueue != NULL && xGyroQueue != NULL && xDistanceQueue != NULL && xI2C1_Mutex){
 		DHT22_Task_Init();
 		LCD_Task_Init();
 		uint8_t mpu_id = MPU6050_Identity_Check();
 		MPU6050_Task_Init();
+		HCSR04_Task_Init();
+
 		vTaskStartScheduler();
+	}else{
+
+		while(1){}
+
 	}
 
-
-	while(1){}
 }
 
 void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName){

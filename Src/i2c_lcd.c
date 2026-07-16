@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "i2c_lcd.h"
 #include "telemetry.h"
+#include "microdelay.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -47,26 +48,6 @@ void I2C_Config(void){
 	I2C_CR1 |= (1 << 0); // Turn on PE (Peripheral Enable)
 
 }
-/*
-void Delay_us(uint16_t us){
-
-	TIM3_CNT = 0;								// COMMENTED OUT DUE TO MULTIPLE DEFINITON
-
-	while(TIM3_CNT < us);
-
-}*/
-
-void TIM3_Init(void){
-
-	 RCC_APB1ENR |= (1U << 1); // TIM3 Enable
-
-	 TIM3_ARR = 0xFFFF; // ARR Limit
-	 TIM3_PSC = 15U; // Prescaler
-	 TIM3_EGR |= (1U <<0);
-	 TIM3_CR1 |= (1U << 0); // Enable Counter
-
- }
-
 
 
 							/*	THIS FUNCTION WAS WRITTEN WITH THE AID OF GENERATIVE AI (Google Gemini, 2026).
@@ -375,6 +356,8 @@ void reset_format(char *str){
 
 extern QueueHandle_t xClimateQueue;
 extern QueueHandle_t xGyroQueue;
+extern QueueHandle_t xDistanceQueue;
+
 volatile UBaseType_t display_watermark = 0;
 
 void vDisplayTask(void *pvParameters){
@@ -382,28 +365,101 @@ void vDisplayTask(void *pvParameters){
 	Climate_Payload_t Received_Data;
 	Climate_Payload_t Displayed_Data;
 	Gryo_Payload_t Received_Gyro;
+	uint32_t Received_distance = 0;
 
 	char temp_string_box[16];
     char hum_string_box[16];
     char gyro_string_box[16];
+    char dist_string_box[16];
 
     Displayed_Data.Temperature = 0.0f;
 	Displayed_Data.Humidity = 0.0f;
 
 
-    LCD_Init(0x27);
-    LCD_Send_Cmd(0x27, 0x01);
+    LCD_Init(ENV_DISP_ADDRESS);
     vTaskDelay(pdMS_TO_TICKS(3));
 
+    LCD_Init(NAV_DISP_ADDRESS);
+    vTaskDelay(pdMS_TO_TICKS(3));
 
-    LCD_Set_Cursor(0x27, 0, 0);
-    LCD_Send_String(0x27, "T:      H:      ");
-    LCD_Set_Cursor(0x27, 1, 0);
-    LCD_Send_String(0x27, "X:   Y:   Z:   ");
+    LCD_Init(DISTANCE_DISP_ADDRESS);
+    vTaskDelay(pdMS_TO_TICKS(3));
 
-    Gryo_Payload_t Displayed_Gyro = {9999, 9999, 9999};
+    LCD_Send_Cmd(ENV_DISP_ADDRESS, 0x01);
+    LCD_Send_Cmd(NAV_DISP_ADDRESS, 0x01);
+    LCD_Send_Cmd(DISTANCE_DISP_ADDRESS, 0x01);
+    vTaskDelay(pdMS_TO_TICKS(5));
+
+    // Environment Screen (ENV_DISP_ADDRESS)
+    LCD_Set_Cursor(ENV_DISP_ADDRESS, 0, 0);
+    LCD_Send_String(ENV_DISP_ADDRESS, "TEMP: ");
+    LCD_Set_Cursor(ENV_DISP_ADDRESS, 1, 0);
+    LCD_Send_String(ENV_DISP_ADDRESS, "HUM: ");
+
+    // Navigation Screen (NAV_DISP_ADDRESS)
+    LCD_Set_Cursor(NAV_DISP_ADDRESS, 0, 0);
+    LCD_Send_String(NAV_DISP_ADDRESS, "X:       Y: ");
+    LCD_Set_Cursor(NAV_DISP_ADDRESS, 1, 0);
+    LCD_Send_String(NAV_DISP_ADDRESS, "Z: ");
+
+    // Distance Screen (DISTANCE_DISP_ADDRESS)
+    LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 0, 0);
+    LCD_Send_String(DISTANCE_DISP_ADDRESS, "DISTANCE:");
+    LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 0, 14); // Setup for the 'cm' unit
+    LCD_Send_String(DISTANCE_DISP_ADDRESS, "cm");
 
     while(1) {
+    										/* DHT-22 */
+
+    	if (xQueueReceive(xClimateQueue, &Received_Data, pdMS_TO_TICKS(10)) == pdPASS) {
+    	    uint8_t redraw_needed = 0;
+
+    	    							/*	HYSTERESIS FILTER	*/
+    	    if (Received_Data.Sensor_Status == 1) {
+
+    	    	float temp_diff = Received_Data.Temperature - Displayed_Data.Temperature;
+    	    	if (temp_diff < 0.0f) temp_diff = -temp_diff;
+
+    	    	float hum_diff = Received_Data.Humidity - Displayed_Data.Humidity;
+    	    	if (hum_diff < 0.0f) hum_diff = -hum_diff;
+
+
+    	    	if(temp_diff >= 0.5f || hum_diff >= 1.0f) {
+
+    	    		Displayed_Data.Temperature = Received_Data.Temperature;
+    	    		Displayed_Data.Humidity = Received_Data.Humidity;
+
+    	    		redraw_needed = 1;
+    	    	}
+
+    	    }else{
+    	    	 // HARDWARE FAULT: Overwrite the payload with diagnostic codes.
+
+    	    	Displayed_Data.Temperature = 999.0f;
+    	    	Displayed_Data.Humidity = 999.0f;
+    	    	redraw_needed = 1;
+    	    }
+
+    	    	/*	Logic to save CPU cycles for only when character redrawing is needed	*/
+
+    	    if (redraw_needed == 1){
+
+    	    	Float_To_String(Displayed_Data.Temperature, temp_string_box);
+    	    	Float_To_String(Displayed_Data.Humidity, hum_string_box);
+
+    	    	reset_format(temp_string_box);
+    	    	reset_format(hum_string_box);
+
+    	    	LCD_Set_Cursor(ENV_DISP_ADDRESS, 0, 5);
+    	    	LCD_Send_String(ENV_DISP_ADDRESS, temp_string_box);
+
+    	   	    LCD_Set_Cursor(ENV_DISP_ADDRESS, 1, 4);
+     		    LCD_Send_String(ENV_DISP_ADDRESS, hum_string_box);
+
+  	    	}
+    	}
+    						/* GYRO */
+
     	if(xQueueReceive(xGyroQueue, &Received_Gyro, pdMS_TO_TICKS(10)) == pdPASS){
 
     		if (Received_Gyro.X_Axis > -70 && Received_Gyro.X_Axis < 70) Received_Gyro.X_Axis = 0;
@@ -412,125 +468,86 @@ void vDisplayTask(void *pvParameters){
 
     		uint32_t gyro_reading = 0;
 
-    		if (Received_Gyro.X_Axis != Displayed_Gyro.X_Axis){  				// State-tracking Logic
-
-
     // X-Axis ---->
 
-    			LCD_Set_Cursor(0x27, 1, 2);
-    			if (Received_Gyro.X_Axis < 0){
+    		LCD_Set_Cursor(NAV_DISP_ADDRESS, 0, 2);
+    		if (Received_Gyro.X_Axis < 0){
 
-    				LCD_Send_String(0x27, "-");
-    				gyro_reading = (uint32_t)(Received_Gyro.X_Axis * -1);
+    			LCD_Send_String(NAV_DISP_ADDRESS, "-");
+    			gyro_reading = (uint32_t)(Received_Gyro.X_Axis * -1);
 
-    			}else {
-    				LCD_Send_String(0x27, "+");
-    				gyro_reading = (uint32_t)Received_Gyro.X_Axis;
-    			}
-    				Int_To_String(gyro_reading, gyro_string_box);
-    				reset_format(gyro_string_box);
-    				LCD_Send_String(0x27, gyro_string_box);
+    		}else {
+    			LCD_Send_String(NAV_DISP_ADDRESS, "+");
+    			gyro_reading = (uint32_t)Received_Gyro.X_Axis;
+    		}
+    		    Int_To_String(gyro_reading, gyro_string_box);
+    		    reset_format(gyro_string_box);
+    		    LCD_Send_String(NAV_DISP_ADDRESS, gyro_string_box);
 
     // <---
-    		}
-
-    		if(Received_Gyro.Y_Axis != Displayed_Gyro.Y_Axis){
 
     // Y-Axis ---->
-    				LCD_Set_Cursor(0x27, 1, 7);
-    				if (Received_Gyro.Y_Axis < 0){
+    		 LCD_Set_Cursor(NAV_DISP_ADDRESS, 0, 11);
+    		 if (Received_Gyro.Y_Axis < 0){
 
-    					LCD_Send_String(0x27, "-");
-    					gyro_reading = (uint32_t)(Received_Gyro.Y_Axis * -1);
+    		     LCD_Send_String(NAV_DISP_ADDRESS, "-");
+    		     gyro_reading = (uint32_t)(Received_Gyro.Y_Axis * -1);
 
-    				}else {
+    		  }else {
 
-    					LCD_Send_String(0x27, "+");
-    					gyro_reading = (uint32_t)Received_Gyro.Y_Axis;
-    				}
-    				Int_To_String(gyro_reading, gyro_string_box);
-    				reset_format(gyro_string_box);
-    				LCD_Send_String(0x27, gyro_string_box);
+    		     LCD_Send_String(NAV_DISP_ADDRESS, "+");
+    		     gyro_reading = (uint32_t)Received_Gyro.Y_Axis;
+    		  }
+    		     Int_To_String(gyro_reading, gyro_string_box);
+    		     reset_format(gyro_string_box);
+    		     LCD_Send_String(NAV_DISP_ADDRESS, gyro_string_box);
 
     // <----
-    		}
-
 
     // Z-Axis ---->
-    		if(Received_Gyro.Z_Axis != Displayed_Gyro.Z_Axis){
-    				LCD_Set_Cursor(0x27, 1, 12);
-    				if (Received_Gyro.Z_Axis < 0){
 
-    					LCD_Send_String(0x27, "-");
-    					gyro_reading = (uint32_t)(Received_Gyro.Z_Axis * -1);
+    		  LCD_Set_Cursor(NAV_DISP_ADDRESS, 1, 2);
+    		  if (Received_Gyro.Z_Axis < 0){
 
-    				}else {
+    			  LCD_Send_String(NAV_DISP_ADDRESS, "-");
+    		      gyro_reading = (uint32_t)(Received_Gyro.Z_Axis * -1);
 
-    					LCD_Send_String(0x27, "+");
-    					gyro_reading = (uint32_t)Received_Gyro.Z_Axis;
-    				}
-    					Int_To_String(gyro_reading, gyro_string_box);
-    					reset_format(gyro_string_box);
-    					LCD_Send_String(0x27, gyro_string_box);
+    		  }else {
+
+    		      LCD_Send_String(NAV_DISP_ADDRESS, "+");
+    		      gyro_reading = (uint32_t)Received_Gyro.Z_Axis;
+    		  }
+    		      Int_To_String(gyro_reading, gyro_string_box);
+    		      reset_format(gyro_string_box);
+    		      LCD_Send_String(NAV_DISP_ADDRESS, gyro_string_box);
 
     // <----
-    		}
-    			Displayed_Gyro.X_Axis = Received_Gyro.X_Axis;
-    		    Displayed_Gyro.Y_Axis = Received_Gyro.Y_Axis;
-    		    Displayed_Gyro.Z_Axis = Received_Gyro.Z_Axis;
+
+
     	}
 
-    	if (xQueueReceive(xClimateQueue, &Received_Data, pdMS_TO_TICKS(10)) == pdPASS) {
-    		uint8_t redraw_needed = 0;
+    							/* DISTANCE */
+    	if(xQueueReceive(xDistanceQueue, &Received_distance, pdMS_TO_TICKS(10)) == pdPASS){
 
-    									/*	HYSTERESIS FILTER	*/
-    		if (Received_Data.Sensor_Status == 1) {
+    	    LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 0, 10);
 
-    			float temp_diff = Received_Data.Temperature - Displayed_Data.Temperature;
-    			if (temp_diff < 0.0f) temp_diff = -temp_diff;
+    		if(Received_distance != 999){
 
-    			float hum_diff = Received_Data.Humidity - Displayed_Data.Humidity;
-    			if (hum_diff < 0.0f) hum_diff = -hum_diff;
-
-
-    			if(temp_diff >= 0.5f || hum_diff >= 1.0f) {
-
-    				Displayed_Data.Temperature = Received_Data.Temperature;
-    				Displayed_Data.Humidity = Received_Data.Humidity;
-
-    				redraw_needed = 1;
-    			}
-
+    			Int_To_String(Received_distance, dist_string_box);
+    			reset_format(dist_string_box);
+    			LCD_Send_String(DISTANCE_DISP_ADDRESS, dist_string_box);
     		}else{
-    		             // HARDWARE FAULT: Overwrite the payload with diagnostic codes.
 
-    			Displayed_Data.Temperature = 999.0f;
-    			Displayed_Data.Humidity = 999.0f;
-    		    redraw_needed = 1;
+    			LCD_Send_String(DISTANCE_DISP_ADDRESS, "ERR");
     		}
 
-    							/*	Logic to save CPU cycles for only when character redrawing is needed	*/
-
-    		if (redraw_needed == 1){
-
-    			Float_To_String(Displayed_Data.Temperature, temp_string_box);
-    		    Float_To_String(Displayed_Data.Humidity, hum_string_box);
-
-    		    reset_format(temp_string_box);
-    		    reset_format(hum_string_box);
-
-    		    LCD_Set_Cursor(0x27, 0, 2);
-    		    LCD_Send_String(0x27, temp_string_box);
-
-    		    LCD_Set_Cursor(0x27, 0, 10);
-    		    LCD_Send_String(0x27, hum_string_box);
-
-    		}
     	}
-        display_watermark = uxTaskGetStackHighWaterMark(NULL);
 
+
+    	vTaskDelay(pdMS_TO_TICKS(10));
+        display_watermark = uxTaskGetStackHighWaterMark(NULL);
     }
-   }
+}
 
 void LCD_Task_Init(void) {
     // Priority 2 ensures the screen draws data immediately when available

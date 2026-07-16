@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "dht_22.h"
+#include "microdelay.h"
 #include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -12,13 +13,6 @@
  * Constraint: Maximize CPU availability by preventing software-blocking delay loops; ensure the auto-reload register (ARR) ceiling is maximized to prevent early overflow.
  */
 
- void delay_us(uint16_t us){
-
-	 TIM3_CNT = 0;
-
-	 while(TIM3_CNT < us);
-
- }
 
 
 void DHT22_Start(void) {
@@ -46,12 +40,7 @@ void DHT22_Start(void) {
 
 void DHT22_Timer_Init(void){
 
-	 RCC_APB1ENR |= (1U << 1); // TIM3 Enable
-
-	 TIM3_ARR = 0xFFFF; // ARR Limit
-	 TIM3_PSC = 15U; // Prescaler
-	 TIM3_EGR |= (1U <<0);
-	 TIM3_CR1 |= (1U << 0); // Enable Counter
+	TIM3_Init();
 
  }
 
