@@ -343,14 +343,18 @@ void LCD_Set_Cursor(uint8_t target_address, uint8_t row, uint8_t col) {
 }
 
 
-
-void reset_format(char *str){
-	uint8_t j = 0;
-	while(str[j] != '\0') {
-		j++;
+void Pad_String(char* buffer, uint8_t target_length){
+	uint8_t i = 0;
+	while(buffer[i] != '\0'){
+		i++;
 	}
-		str[j++] = ' ';
-		str[j] = '\0';
+
+	while(i < target_length){
+	        buffer[i] = ' ';
+	        i++;
+	}
+
+	buffer[i] = '\0';
 }
 
 
@@ -392,9 +396,9 @@ void vDisplayTask(void *pvParameters){
 
     // Environment Screen (ENV_DISP_ADDRESS)
     LCD_Set_Cursor(ENV_DISP_ADDRESS, 0, 0);
-    LCD_Send_String(ENV_DISP_ADDRESS, "TEMP: ");
+    LCD_Send_String(ENV_DISP_ADDRESS, "TEMP:       C");
     LCD_Set_Cursor(ENV_DISP_ADDRESS, 1, 0);
-    LCD_Send_String(ENV_DISP_ADDRESS, "HUM: ");
+    LCD_Send_String(ENV_DISP_ADDRESS, "HUM:        %");
 
     // Navigation Screen (NAV_DISP_ADDRESS)
     LCD_Set_Cursor(NAV_DISP_ADDRESS, 0, 0);
@@ -447,13 +451,13 @@ void vDisplayTask(void *pvParameters){
     	    	Float_To_String(Displayed_Data.Temperature, temp_string_box);
     	    	Float_To_String(Displayed_Data.Humidity, hum_string_box);
 
-    	    	reset_format(temp_string_box);
-    	    	reset_format(hum_string_box);
+    	    	Pad_String(temp_string_box, 6);
+    	    	Pad_String(hum_string_box, 6);
 
-    	    	LCD_Set_Cursor(ENV_DISP_ADDRESS, 0, 5);
+    	    	LCD_Set_Cursor(ENV_DISP_ADDRESS, 0, 6);
     	    	LCD_Send_String(ENV_DISP_ADDRESS, temp_string_box);
 
-    	   	    LCD_Set_Cursor(ENV_DISP_ADDRESS, 1, 4);
+    	   	    LCD_Set_Cursor(ENV_DISP_ADDRESS, 1, 6);
      		    LCD_Send_String(ENV_DISP_ADDRESS, hum_string_box);
 
   	    	}
@@ -481,7 +485,7 @@ void vDisplayTask(void *pvParameters){
     			gyro_reading = (uint32_t)Received_Gyro.X_Axis;
     		}
     		    Int_To_String(gyro_reading, gyro_string_box);
-    		    reset_format(gyro_string_box);
+    		    Pad_String(gyro_string_box, 5);
     		    LCD_Send_String(NAV_DISP_ADDRESS, gyro_string_box);
 
     // <---
@@ -499,7 +503,7 @@ void vDisplayTask(void *pvParameters){
     		     gyro_reading = (uint32_t)Received_Gyro.Y_Axis;
     		  }
     		     Int_To_String(gyro_reading, gyro_string_box);
-    		     reset_format(gyro_string_box);
+    		     Pad_String(gyro_string_box, 5);
     		     LCD_Send_String(NAV_DISP_ADDRESS, gyro_string_box);
 
     // <----
@@ -518,7 +522,7 @@ void vDisplayTask(void *pvParameters){
     		      gyro_reading = (uint32_t)Received_Gyro.Z_Axis;
     		  }
     		      Int_To_String(gyro_reading, gyro_string_box);
-    		      reset_format(gyro_string_box);
+    		      Pad_String(gyro_string_box, 5);
     		      LCD_Send_String(NAV_DISP_ADDRESS, gyro_string_box);
 
     // <----
@@ -534,7 +538,7 @@ void vDisplayTask(void *pvParameters){
     		if(Received_distance != 999){
 
     			Int_To_String(Received_distance, dist_string_box);
-    			reset_format(dist_string_box);
+    			Pad_String(dist_string_box, 4);
     			LCD_Send_String(DISTANCE_DISP_ADDRESS, dist_string_box);
     		}else{
 
