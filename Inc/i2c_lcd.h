@@ -32,16 +32,8 @@
 #define I2C_SR2				(*(volatile uint32_t *)(I2C1_BASE + 0x18))
 #define I2C_DR				(*(volatile uint32_t *)(I2C1_BASE + 0x10))
 
-#define TIM3_CR1			(*(volatile uint32_t *)(TIM3_BASE + 0x00))
-#define TIM3_PSC			(*(volatile uint32_t *)(TIM3_BASE + 0x28))
-#define TIM3_ARR			(*(volatile uint32_t *)(TIM3_BASE + 0x2C))
-#define TIM3_CNT 			(*(volatile uint32_t *)(TIM3_BASE + 0x24))
-#define TIM3_EGR 			(*(volatile uint32_t *)(TIM3_BASE + 0x14))
-
 void I2C_GPIO_Init(void);
 void I2C_Config(void);
-void delay_us(uint16_t us);
-void TIM3_Init(void);
 void I2C_ScanBus(void);
 void I2C_Write(uint8_t target_address, uint8_t data);
 void LCD_Send_Cmd(uint8_t target_address, uint8_t cmd);
@@ -53,5 +45,9 @@ void Float_To_String(float num, char *str);
 void LCD_Set_Cursor(uint8_t target_address, uint8_t row, uint8_t col);
 void vDisplayTask(void *pvParameters);
 void LCD_Task_Init(void);
+
+#define ENV_DISP_ADDRESS		 0x27
+#define NAV_DISP_ADDRESS		 0x26
+#define DISTANCE_DISP_ADDRESS	 0x23
 
 #endif /* I2C_LCD_H_ */
