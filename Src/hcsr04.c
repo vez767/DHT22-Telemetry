@@ -15,9 +15,6 @@
 
 #define ABS_DIFF(a, b) ( (int32_t)(a) > (int32_t)(b) ? ((int32_t)(a) - (int32_t)(b)) : ((int32_t)(b) - (int32_t)(a)) )
 
-volatile uint32_t capture_start = 0;
-volatile uint32_t capture_duration = 0;
-volatile uint32_t capture_end = 0;
 
 void HCSR04_Init(void){
 
@@ -53,7 +50,12 @@ void HCSR04_Init(void){
 	NVIC_ISER0 |= (1U << 28);
 }
 
+extern TaskHandle_t xHCSR04TaskHandle;
 void TIM2_IRQHandler(void){
+
+	static volatile uint32_t capture_start = 0;
+	static volatile uint32_t capture_end = 0;
+	uint32_t capture_duration = 0;
 
 	if(TIM2_SR & (1U << 2)){
 
@@ -63,8 +65,12 @@ void TIM2_IRQHandler(void){
 
 		}else{
 				// Falling Edge
-			capture_end = TIM2_CCR2;
-			capture_duration = capture_end - capture_start;
+			 capture_end = TIM2_CCR2;
+			 capture_duration = capture_end - capture_start;
+
+			 BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+			 xTaskNotifyFromISR(xHCSR04TaskHandle, capture_duration, eSetValueWithOverwrite, &xHigherPriorityTaskWoken);
+			 portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 		}
 
 		TIM2_SR &= ~(1U << 2); // Clear Flag
@@ -72,10 +78,11 @@ void TIM2_IRQHandler(void){
 }
 
 
-extern volatile uint32_t capture_duration;
+
 extern QueueHandle_t xDistanceQueue;
 
 void vHCSR04_Task(void *pvParameters) {
+	uint32_t capture_duration = 0;
     uint32_t distance_cm = 0;
 
     uint32_t dist_buffer[10] = {0};
@@ -92,8 +99,7 @@ void vHCSR04_Task(void *pvParameters) {
         delay_us(13);
         GPIOA_BSRR = (1U << (9 + 16));   // PA9 - LOW
 
-        // SAFE STATE TIMEOUT (50ms)
-        vTaskDelay(pdMS_TO_TICKS(50));
+      if(xTaskNotifyWait(0x00, 0xFFFFFFFF, &capture_duration, pdMS_TO_TICKS(50)) == pdTRUE){
 
         // SAFETY CHECK
         if (capture_duration > 0 && capture_duration < 38000) { // 38000us is roughly 6.5 meters; past sensor limit
@@ -144,6 +150,9 @@ void vHCSR04_Task(void *pvParameters) {
     		is_first_boot = 1; // Sensor Fault
         }
 
+      }else value_to_send = 888; // Error Code
+      is_first_boot = 1;
+
         if (xDistanceQueue != NULL && last_value_sent != value_to_send) {
             xQueueSend(xDistanceQueue, &value_to_send, 0);
             last_value_sent = value_to_send;
@@ -153,5 +162,5 @@ void vHCSR04_Task(void *pvParameters) {
 }
 
 void HCSR04_Task_Init(void){
-	xTaskCreate(vHCSR04_Task , "vHCSR04_Task", 256, NULL, 3, NULL);
+	xTaskCreate(vHCSR04_Task , "vHCSR04_Task", 256, NULL, 3, &xHCSR04TaskHandle);
 }

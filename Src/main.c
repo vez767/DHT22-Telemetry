@@ -36,6 +36,7 @@ QueueHandle_t xClimateQueue;
 QueueHandle_t xGyroQueue;
 QueueHandle_t xDistanceQueue;
 
+TaskHandle_t xHCSR04TaskHandle = NULL;
 SemaphoreHandle_t xI2C1_Mutex;
 
 
@@ -61,6 +62,7 @@ int main(void)
 		MPU6050_Task_Init();
 		HCSR04_Task_Init();
 
+		while(xHCSR04TaskHandle == NULL){};
 		vTaskStartScheduler();
 	}else{
 
