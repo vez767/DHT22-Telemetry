@@ -22,6 +22,11 @@ typedef struct {
 	int16_t Z_Axis;
 } Gryo_Payload_t;
 
+typedef struct {
+	uint32_t distance;
+	int8_t status; // ERROR CODES: 1 - SUCCESS | -1 - TARGET LOST | -2 - HARDWARE FAULT(WIRING)
+}Acoustic_Payload_t;
+
 
 
 #endif /* TELEMETRY_H_ */

@@ -52,7 +52,7 @@ int main(void)
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
 	xI2C1_Mutex = xSemaphoreCreateMutex();
 	xGyroQueue = xQueueCreate(5, sizeof(Gryo_Payload_t));
-	xDistanceQueue = xQueueCreate(5, sizeof(uint32_t));
+	xDistanceQueue = xQueueCreate(5, sizeof(Acoustic_Payload_t));
 
 
 	if( xClimateQueue != NULL && xGyroQueue != NULL && xDistanceQueue != NULL && xI2C1_Mutex){

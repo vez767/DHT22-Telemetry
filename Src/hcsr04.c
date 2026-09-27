@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "hcsr04.h"
 #include "microdelay.h"
+#include "telemetry.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -82,16 +83,21 @@ void TIM2_IRQHandler(void){
 extern QueueHandle_t xDistanceQueue;
 
 void vHCSR04_Task(void *pvParameters) {
+	Acoustic_Payload_t HCSR04;
+	HCSR04.status = 0;
+
 	uint32_t capture_duration = 0;
     uint32_t distance_cm = 0;
+    uint32_t last_valid_dist = 9999;
 
     uint32_t dist_buffer[10] = {0};
     uint8_t dist_buffer_index = 0;
-    uint32_t last_valid_dist = 0;
-    uint32_t value_to_send = 0;
-    uint32_t last_value_sent = 9999;
+
     uint8_t is_first_boot = 1;
     uint8_t anomaly_count = 0;
+
+    int8_t last_status = 0;
+    int8_t updated_status = 0;
 
     while(1) {
 
@@ -138,24 +144,29 @@ void vHCSR04_Task(void *pvParameters) {
         		cummulative_distance += dist_buffer[i];
         	}
 
-        	value_to_send = (uint32_t)(cummulative_distance / 10);
-
+        	HCSR04.distance = (uint32_t)(cummulative_distance / 10);
+        	HCSR04.status = 1;
+        	updated_status = HCSR04.status;
         	}else{
         		anomaly_count++;
         	}
 
         }else {
 
-    		value_to_send = 999; // Error Code
+        	HCSR04.status = -1; // Error Code - Target lost
+        	updated_status = HCSR04.status;
     		is_first_boot = 1; // Sensor Fault
         }
 
-      }else value_to_send = 888; // Error Code
-      is_first_boot = 1;
+      }else {
+    	  HCSR04.status = -2; // Error Code - Hardware fault
+    	  updated_status = HCSR04.status;
+    	  is_first_boot = 1;
+      }
 
-        if (xDistanceQueue != NULL && last_value_sent != value_to_send) {
-            xQueueSend(xDistanceQueue, &value_to_send, 0);
-            last_value_sent = value_to_send;
+        if (xDistanceQueue != NULL && (HCSR04.status == 1 || last_status != updated_status)) {
+            xQueueSend(xDistanceQueue, &HCSR04, 0);
+            last_status = updated_status;
         }
         vTaskDelay(pdMS_TO_TICKS(150));
     }
