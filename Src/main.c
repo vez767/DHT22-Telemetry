@@ -23,6 +23,7 @@
 #include "i2c_lcd.h"
 #include "mpu6050.h"
 #include "hcsr04.h"
+#include "usart.h"
 #include "microdelay.h"
 #include "telemetry.h"
 #include "FreeRTOS.h"
@@ -37,6 +38,7 @@ QueueHandle_t xGyroQueue;
 QueueHandle_t xDistanceQueue;
 
 TaskHandle_t xHCSR04TaskHandle = NULL;
+TaskHandle_t xGpsTaskHandle = NULL;
 SemaphoreHandle_t xI2C1_Mutex;
 
 
@@ -44,9 +46,16 @@ int main(void)
 {
 	FPU_Init();
 	TIM3_Init();
+
 	I2C_GPIO_Init();
 	I2C_Config();
+
 	HCSR04_Init();
+
+	USART2_Init();
+	GPS_USART6_Init();
+	USART2_Task_Init();
+
 
 
 	xClimateQueue = xQueueCreate(5, sizeof(Climate_Payload_t));
@@ -63,6 +72,7 @@ int main(void)
 		HCSR04_Task_Init();
 
 		while(xHCSR04TaskHandle == NULL){};
+		while(xGpsTaskHandle == NULL){};
 		vTaskStartScheduler();
 	}else{
 
