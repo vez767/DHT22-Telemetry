@@ -1,6 +1,6 @@
-# Low-Level STM32 Environmental & Spatial Telemetry Monitor: FreeRTOS Architecture (v2.0)
+# Low-Level STM32 Environmental & Spatial Telemetry Monitor: FreeRTOS Architecture (v3.0)
 
-*Note: For the legacy baseline, early HIL (Hardware-in-the-Loop) debugging videos, and foundational 1-Wire timing logic, please refer to[ARCHITECTURE.md](ARCHITECTURE.md).
+*Note: For the legacy baseline, early HIL (Hardware-in-the-Loop) debugging videos, and foundational 1-Wire timing logic, please refer to [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Overview
 
@@ -10,6 +10,7 @@ The system actively monitors:
 *   **Environmental Data:** Temperature and Humidity via a DHT22 (1-Wire).
 *   **Spatial Kinematics:** 3D X/Y/Z orientation via an MPU-6050 IMU (I2C).
 *   **Distance/Proximity:** Centimeter-accurate ranging via an HC-SR04 Ultrasonic Sensor (Timer Input Capture).
+*   **Geospatial Tracking:** NMEA coordinate parsing via a NEO-6M GPS Module (UART DMA).
 
 Rather than relying on pre-built Arduino-style libraries, all drivers were architected from scratch using manufacturer datasheets and direct memory-mapped register access. The firmware relies heavily on FreeRTOS IPC (Inter-Process Communication) queues, hardware timers, and Mutexes to render data across **three separate I2C LCD modules** simultaneously without bus collisions or thread starvation.
 
@@ -20,10 +21,11 @@ A core requirement of this architecture was preventing silent crashes. Because t
 *   **Sensor Hardware Disconnects:** If the DHT22 data wire is severed, the system catches the timeout and overrides the UI with a diagnostic `999.0` error code. If the HC-SR04 Trigger or Echo wires are pulled, the UI safely falls back to an `ERR` state.
 *   **Task Independence:** Severing one sensor does not lock the I2C bus or freeze the RTOS scheduler. The other sensors and LCDs will continue rendering live data without interruption.
 
-### 2. The HC-SR04 Anomaly Filter & Stale Data Reset
-Raw ultrasonic data is highly susceptible to noise. The `vHCSR04_Task` implements a mathematical 10-sample running-average filter via a data buffer `dist_buffer[10]` and a mathematical variance check (rejecting jumps > 20cm). 
-*   **The Stale Data Trap:** To prevent the variance filter from permanently locking out legitimate rapid movements (e.g., an object instantly moving from 300cm to 20cm), an `anomaly_count` strike system was engineered. 
-*   **Resolution:** If 3 consecutive readings fall outside the variance, the RTOS assumes the old data is stale. It flushes the 10-sample buffer, momentarily flashes `ERR` on the display to indicate the state machine is resetting, and instantly locks onto the new physical target.
+### 2. The HC-SR04 Anomaly Filter & State Machine
+Raw ultrasonic data is highly susceptible to noise and acoustic absorption. The `vHCSR04_Task` implements a 10-sample running-average filter and a dedicated status payload to isolate faults:
+*   **Status 1 (Normal):** Displays valid physical distance.
+*   **Status -1 (Target Lost):** Triggered if an object absorbs the ultrasonic ping (e.g., a sponge) or moves out of the ~6.5m maximum range, forcing a safe buffer flush.
+*   **Status -2 (Wire Fault):** Triggered via a 50ms RTOS timeout if a physical wire is severed.
 
 ### 3. Resource Synchronization (Mutex I2C Arbitration)
 **Requirement:** Prevent I2C bus collisions between the MPU-6050 IMU and the three HD44780 LCD controllers.
@@ -38,8 +40,14 @@ To mathematically guarantee the UI task will not trigger a stack overflow during
 > <img width="750" height="178" alt="Screenshot 2026-07-02 175628" src="https://github.com/user-attachments/assets/843de20e-a5e3-4582-aa1c-deb72a44124f" />
 
 #### *FreeRTOS High Watermark validation confirming safe memory margins under maximum system load.*
----
 
+### 6. Asynchronous GPS Ingestion (UART DMA)
+To prevent NMEA string parsing from blocking the CPU, the NEO-6M GPS communicates via USART6 utilizing a hardware-level Circular DMA Buffer. The RTOS task ingests geospatial coordinates in the background, guaranteeing that satellite tracking does not steal clock cycles from the high-frequency I2C LCD rendering task.
+
+<img width="674" height="46" alt="Screenshot 2026-09-14 134336" src="https://github.com/user-attachments/assets/45898ba8-f814-4834-b87f-3f0d73fab276" />
+
+
+---
 ## Hardware Integration & HIL Debugging
 
 The transition to a multi-node RTOS architecture required strict Hardware-in-the-Loop (HIL) verification. 
@@ -63,9 +71,12 @@ To drive three identical Freenove 1602 LCDs on a single I2C bus, the PCF8574 bac
 
 
 ### HIL Verification Showcases
- * **Full System Telemetry & Task Independence:** All three screens render data smoothly without bus collisions, and successfully maintain independent real-time updates for the remaining sensors even when individual data wires are intentionally severed to force safe-state error codes.
+* **Full System Telemetry & Task Independence:** All three screens render data smoothly without bus collisions. Includes active NEO-6M geospatial tracking verified simultaneously via UART output on a PuTTY terminal.
 
-> <video src= "https://github.com/user-attachments/assets/b9b83778-cf76-4c69-8527-191ccd7fb8b1"  width="600" controls></video>
+> <video src= "https://github.com/user-attachments/assets/c85f6cc6-1672-4fde-892f-f4b193c6d4dd"  width="600" controls></video>
+
+
+
 
   
 * **Fault Isolation (DHT22):** Physically severing the DHT22 `SIG` wire (Pin `PA0`) triggers the `999.0` error code on the Environment LCD, while the Gyro and Distance LCDs continue updating  in real-time.
@@ -73,9 +84,13 @@ To drive three identical Freenove 1602 LCDs on a single I2C bus, the PCF8574 bac
 
 
 
-* **HC-SR04 Fault Isolation & Anomaly Reset:** Demonstrates the 3-strike anomaly filter flashing error code `ERR` to showcase negligable readings due to the HCSR04's ultrasonic hardware limitation or dump stale buffer data before locking onto sudden close-range objects, as well as safely triggering a continuous `ERR` state if the `TRIG` wire (`D8/PA9`) is severed, all without affecting other system tasks.
+* **HC-SR04 Fault Isolation & Acoustic Limits:** Demonstrates the 3-tier state machine. A sponge is used to absorb the acoustic ping, triggering the `-1 (TRGT LOST)` hardware limitation and dumping stale buffer data. Finally, the `TRIG` wire (`D8/PA9`) is physically severed, instantly tripping the RTOS timeout and locking the screen into a `-2 (WIRE FAULT)` safe state whilst the Gyro and Temperature LCDs continue updating  in real-time.
 
->  <video src= "https://github.com/user-attachments/assets/3edcd5af-95b0-423d-b782-4a07def9ff79" width="500" controls></video>
+>  <video src= "https://github.com/user-attachments/assets/e162aba9-1aeb-4a52-a3e9-c2649a8b1dc4" width="500" controls></video>
+
+
+
+
 
 
 
@@ -90,8 +105,10 @@ The HD44780 controller requires instructions to be split into upper and lower 4-
 
 > <video src="https://github.com/user-attachments/assets/185b82fc-364e-46ff-bdc7-b904437d71ab" width="500" controls></video>
 
-*   **Current Workaround:** Multiple warm boots (via the STM32 reset button) are required to reset the HD44780 internal state machines. 
-
+*   **Current Workaround:** Multiple warm boots (via the STM32 reset button) are required to reset the HD44780 internal state machines.
+*   
+### Geospatial Cold Start 
+*   **Cold Start Lock:** The NEO-6M requires a direct line of sight to the sky. Initial lock (cold start) can take several minutes, during which the system will report un-fixed baseline coordinates.
 
 
 
@@ -110,6 +127,9 @@ The HD44780 controller requires instructions to be split into upper and lower 4-
 | **I2C Bus 1** | SCL | `PB8` | Shared Clock for MPU-6050 and 3x LCDs (Open Drain). |
 | **I2C Bus 1** | SDA | `PB9` | Shared Data for MPU-6050 and 3x LCDs (Open Drain). |
 | **Power** | VCC | 5V / 3.3V | LCDs require 5V rail; Sensors operate on 3.3V rail. |
+| **NEO-6M** | TX | `PA12` | USART6 RX (DMA Circular Buffer). |
+| **NEO-6M** | VCC | 5V | Requires 5V rail for satellite lock. |
+| **NEO-6M** | GND | GND | Common ground. |
 
 ---
 
@@ -117,7 +137,8 @@ The HD44780 controller requires instructions to be split into upper and lower 4-
 
 As the curriculum moves toward advanced firmware topics, the following hardware constraints will be addressed:
 *   **Independent Watchdog (IWDG) Fault Recovery:** While the software currently handles disconnected data wires, physically severing a sensor's *ground* wire causes a hardware lockup that stalls the RTOS. An IWDG timer will be implemented to autonomously hard-reset the MCU if the scheduler freezes.
-*   **Direct Memory Access (DMA):** Previous experiments to migrate I2C transmissions to DMA resulted in payload corruption. DMA remains a targeted milestone for future low-power optimization.
+*   **Geospatial UI Integration:** While NEO-6M coordinates are currently routed to a terminal via UART, the next UI iteration will integrate Latitude/Longitude payloads directly into the I2C LCD matrix.
 
+  
 ## Acknowledgements
 **AI Attribution:** Google Gemini was utilized as an interactive engineering tutor during this project. Rather than writing the application logic, the AI was strictly prompted to assign tasks, define architectural constraints, explain register-level logic, and review code. This methodology fostered a deep comprehension of bridging bare-metal hardware protocols with a Real-Time Operating System.
