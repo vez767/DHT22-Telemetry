@@ -369,7 +369,7 @@ void vDisplayTask(void *pvParameters){
 	Climate_Payload_t Received_Data;
 	Climate_Payload_t Displayed_Data;
 	Gryo_Payload_t Received_Gyro;
-	uint32_t Received_distance = 0;
+	Acoustic_Payload_t HCSR04;
 
 	char temp_string_box[16];
     char hum_string_box[16];
@@ -408,9 +408,12 @@ void vDisplayTask(void *pvParameters){
 
     // Distance Screen (DISTANCE_DISP_ADDRESS)
     LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 0, 0);
-    LCD_Send_String(DISTANCE_DISP_ADDRESS, "DISTANCE:");
+    LCD_Send_String(DISTANCE_DISP_ADDRESS, "DIST: ");
     LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 0, 14); // Setup for the 'cm' unit
     LCD_Send_String(DISTANCE_DISP_ADDRESS, "cm");
+
+    LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 1, 0);
+    LCD_Send_String(DISTANCE_DISP_ADDRESS, "STATUS: ");
 
     while(1) {
     										/* DHT-22 */
@@ -531,18 +534,34 @@ void vDisplayTask(void *pvParameters){
     	}
 
     							/* DISTANCE */
-    	if(xQueueReceive(xDistanceQueue, &Received_distance, pdMS_TO_TICKS(10)) == pdPASS){
+    	if(xQueueReceive(xDistanceQueue, &HCSR04, pdMS_TO_TICKS(10)) == pdPASS){
 
-    	    LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 0, 10);
+    		LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 0, 6);
 
-    		if(Received_distance != 999){
+    		if(HCSR04.status == 1){ //ERR CODE 1: SUCCESS
 
-    			Int_To_String(Received_distance, dist_string_box);
-    			Pad_String(dist_string_box, 4);
+    			Int_To_String(HCSR04.distance, dist_string_box);
+    			Pad_String(dist_string_box, 8);
     			LCD_Send_String(DISTANCE_DISP_ADDRESS, dist_string_box);
-    		}else{
 
-    			LCD_Send_String(DISTANCE_DISP_ADDRESS, "ERR");
+    			LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 0, 14);
+    			LCD_Send_String(DISTANCE_DISP_ADDRESS, "cm");
+
+    			LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 1, 8);
+    			LCD_Send_String(DISTANCE_DISP_ADDRESS, " 1 ");
+
+    		}else if((HCSR04.status == -1)){	//ERR CODE -1: TARGET LOST
+
+    			LCD_Send_String(DISTANCE_DISP_ADDRESS, "TRGT LOST");
+
+    			LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 1, 8);
+    			LCD_Send_String(DISTANCE_DISP_ADDRESS, "-1 ");
+
+    		}else{ //ERR CODE -2: HARDWARE FAULT(WIRING)
+    			LCD_Send_String(DISTANCE_DISP_ADDRESS, "WIRE FAULT");
+
+    			LCD_Set_Cursor(DISTANCE_DISP_ADDRESS, 1, 8);
+    			LCD_Send_String(DISTANCE_DISP_ADDRESS, "-2 ");
     		}
 
     	}
