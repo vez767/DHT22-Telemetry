@@ -73,20 +73,19 @@ To drive three identical Freenove 1602 LCDs on a single I2C bus, the PCF8574 bac
 ### HIL Verification Showcases
 * **Full System Telemetry & Task Independence:** All three screens render data smoothly without bus collisions. Includes active NEO-6M geospatial tracking verified simultaneously via UART output on a PuTTY terminal.
 
-> <video src= "https://github.com/user-attachments/assets/c85f6cc6-1672-4fde-892f-f4b193c6d4dd"  width="600" controls></video>
 
-
-
+https://github.com/user-attachments/assets/c85f6cc6-1672-4fde-892f-f4b193c6d4dd
 
   
 * **Fault Isolation (DHT22):** Physically severing the DHT22 `SIG` wire (Pin `PA0`) triggers the `999.0` error code on the Environment LCD, while the Gyro and Distance LCDs continue updating  in real-time.
->  <video src= "https://github.com/user-attachments/assets/108a37f1-de67-48c1-b262-84feaec79e70" width="500" controls></video>
+  
+https://github.com/user-attachments/assets/108a37f1-de67-48c1-b262-84feaec79e70
 
 
 
 * **HC-SR04 Fault Isolation & Acoustic Limits:** Demonstrates the 3-tier state machine. A sponge is used to absorb the acoustic ping, triggering the `-1 (TRGT LOST)` hardware limitation and dumping stale buffer data. Finally, the `TRIG` wire (`D8/PA9`) is physically severed, instantly tripping the RTOS timeout and locking the screen into a `-2 (WIRE FAULT)` safe state whilst the Gyro and Temperature LCDs continue updating  in real-time.
 
->  <video src= "https://github.com/user-attachments/assets/e162aba9-1aeb-4a52-a3e9-c2649a8b1dc4" width="500" controls></video>
+https://github.com/user-attachments/assets/e162aba9-1aeb-4a52-a3e9-c2649a8b1dc4
 
 
 
@@ -103,10 +102,10 @@ To drive three identical Freenove 1602 LCDs on a single I2C bus, the PCF8574 bac
 The HD44780 controller requires instructions to be split into upper and lower 4-bit nibbles. If the STM32 undergoes a cold boot (hard power cycle via USB), the three LCD multiplexers often fail to synchronize simultaneously.
 *   **Symptom:** Only 1 or 2 of the 3 screens will successfully initialize; the others remain blank or display garbage characters due to nibble misalignment.
 
-> <video src="https://github.com/user-attachments/assets/185b82fc-364e-46ff-bdc7-b904437d71ab" width="500" controls></video>
+https://github.com/user-attachments/assets/185b82fc-364e-46ff-bdc7-b904437d71ab
 
 *   **Current Workaround:** Multiple warm boots (via the STM32 reset button) are required to reset the HD44780 internal state machines.
-*   
+  
 ### Geospatial Cold Start 
 *   **Cold Start Lock:** The NEO-6M requires a direct line of sight to the sky. Initial lock (cold start) can take several minutes, during which the system will report un-fixed baseline coordinates.
 
